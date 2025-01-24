@@ -1,0 +1,8 @@
+run
+jump
+quick
+jump
+car
+fast
+study
+study

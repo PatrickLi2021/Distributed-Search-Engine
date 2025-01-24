@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Systems</title>
+</head>
+<body>
+    <header>
+        <h1>Welcome to CSCI 1380</h1>
+        <p>Distributed Computer Systems</p>
+    </header>
+
+    <section>
+        <h2>Introduction</h2>
+        <p>
+            This course covers distributed systems
+        </p>
+    </section>
+
+    <section>
+        <h2>Topics</h2>
+        <p>
+            Partitioning
+        </p>
+        <ul>
+            <li>Database Sharding</li>
+            <li>Load Balancing</li>
+            <li>Databases</li>
+            <li>Hashing</li>
+        </ul>
+        <p>
+            Those are the categories.
+        </p>
+    </section>
+
+    <section>
+        <h2>Fault Tolerance</h2>
+        <p></p>
+        <ol>
+            <li><a href="guides/beginners-guide-to-fault-tolerance.html">Graceful Degradation</a></li>
+            <li><a href="guides/graphs.html">Redundancy</a></li>
+            <li><a href="guides/failover.html">Failover</a></li>
+        </ol>
+        <p>
+            Those are the categories
+        </p>
+    </section>
+</body>
+</html>
