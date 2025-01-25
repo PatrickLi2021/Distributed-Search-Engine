@@ -63,7 +63,7 @@ rl.on('close', () => {
   const globalIndexData = fs.readFileSync(globalIndexPath, 'utf8');
 
   // If there's an error with filename, create error and call printMerged
-  if (globalIndexName == null || globalIndexPath.slice(-4) != '.txt') {
+  if (globalIndexName == null) {
     const err = new Error('file invalid');
     printMerged(err, globalIndexData);
   }
@@ -102,13 +102,15 @@ const printMerged = (err, data) => {
   // Use the .trim() method to remove leading and trailing whitespace from a string.
   for (const line of globalIndexLines) {
     const [term, urlFreqData] = line.split(' | ');
-    const urlFreqPairs = urlFreqData.split(' ');
-
+    let urlFreqPairs;
     const urlFreqList = [];
-    for (let i = 0; i < urlFreqPairs.length; i += 2) {
-      const url = urlFreqPairs[i];
-      const freq = parseInt(urlFreqPairs[i + 1], 10);
-      urlFreqList.push({url, freq}); // Array of {url, freq} objects
+    if (urlFreqData != null) {
+      urlFreqPairs = urlFreqData.split(' ');
+      for (let i = 0; i < urlFreqPairs.length; i += 2) {
+        const url = urlFreqPairs[i];
+        const freq = parseInt(urlFreqPairs[i + 1], 10);
+        urlFreqList.push({url, freq}); // Array of {url, freq} objects
+      }
     }
 
     if (term in global) {
@@ -126,6 +128,7 @@ const printMerged = (err, data) => {
   //     - Add it as a new entry with the local index's data.
   // 6. Print the merged index to the console in the same format as the global index file:
   //    - Each line contains a term, followed by a pipe (`|`), followed by space-separated pairs of `url` and `freq`.
+
   for (const term in local) {
     if (term in global) {
       global[term].push({url: local[term].url, freq: local[term].freq});
@@ -135,9 +138,14 @@ const printMerged = (err, data) => {
     }
   }
   for (const term in global) {
-    const url = global[term][0].url;
-    const freq = global[term][0].freq;
-    console.log(term + ' | ' + url + ' ' + freq);
+    let outputStr = '';
+    outputStr += term + ' | ';
+    for (const urlFreq in global[term]) {
+      const url = global[term][urlFreq].url;
+      const freq = global[term][urlFreq].freq;
+      outputStr += url + ' ' + freq + ' ';
+    }
+    console.log(outputStr.substring(0, outputStr.length - 1));
   }
   // TODO?: After you're done creating the current global index, we need to write it back to the file
   // so that the file contains the updated global index
