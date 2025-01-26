@@ -25,10 +25,9 @@ For example, `execSync(`echo "${input}" | ./c/process.sh`, {encoding: 'utf-8'});
 */
 
 
-const fs = require('fs');
+// const fs = require('fs');
 const {execSync} = require('child_process');
-// const path = require('path');
-
+const path = require('path');
 
 function query(indexFile, args) {
   const input = args.join(' ');
@@ -41,16 +40,26 @@ function query(indexFile, args) {
   const processedTerms = processedOutput.trim().split('\n');
 
   // Read the index file
-  const indexData = fs.readFileSync(indexFile, 'utf-8');
-  const indexLines = indexData.split('\n');
+  // const indexData = fs.readFileSync(indexFile, 'utf-8');
+  // const indexLines = indexData.split('\n');
+  const curPath = path.join('', indexFile);
 
   // Build a regular expression from the processed terms
   const searchQuery = processedTerms.join(' ');
-  const queryRegex = new RegExp(`\\b${searchQuery}\\b`, 'i');
+  const grepCommand = `grep -i "${searchQuery}" ${curPath}`;
+  // const queryRegex = new RegExp(`\\b${searchQuery}\\b`, 'i');
 
   // Search for matching lines in the index file
-  const matchingLines = indexLines.filter((line) => queryRegex.test(line));
-  matchingLines.forEach((line) => console.log(line));
+  try {
+    // Execute grep command to search for matching lines in the index file
+    const result = execSync(grepCommand, {encoding: 'utf-8'});
+
+    // Output the matching lines (from the grep result)
+    console.log(result.trim());
+  } catch (error) {
+    // If grep returns an error (e.g., no matches), log the error
+    console.error('No matches found or error occurred:', error.message);
+  }
 }
 
 const args = process.argv.slice(2); // Get command-line arguments

@@ -3,7 +3,7 @@
 /*
 Merge the current inverted index (assuming the right structure) with the global index file
 Usage: cat input | ./merge.js global-index > output
-Sample Command: cat ../t/d/m1.txt | ./merge.js global-index > ../d/global-index.txt
+Sample Command: cat t/d/m1.txt | ./merge.js global-index > d/global-index.txt
 
 The inverted indices have the different structures!
 
@@ -34,7 +34,7 @@ Remember to error gracefully, particularly when reading the global index file.
 
 const fs = require('fs');
 const readline = require('readline');
-const path = require('path');
+// const path = require('path');
 
 // The `compare` function can be used for sorting.
 const compare = (a, b) => {
@@ -59,8 +59,7 @@ rl.on('close', () => {
   // 2. Read the global index name/location, using process.argv
   // and call printMerged as a callback
   const globalIndexName = process.argv[2];
-  const globalIndexPath = path.resolve(globalIndexName);
-  const globalIndexData = fs.readFileSync(globalIndexPath, 'utf8');
+  const globalIndexData = fs.readFileSync(globalIndexName, 'utf8');
 
   // If there's an error with filename, create error and call printMerged
   if (globalIndexName == null) {
@@ -132,10 +131,12 @@ const printMerged = (err, data) => {
   for (const term in local) {
     if (term in global) {
       global[term].push({url: local[term].url, freq: local[term].freq});
-      global[term].sort(compare);
     } else {
       global[term] = [{url: local[term].url, freq: local[term].freq}];
     }
+  }
+  for (const term in local) {
+    global[term].sort(compare);
   }
   for (const term in global) {
     let outputStr = '';
@@ -147,6 +148,4 @@ const printMerged = (err, data) => {
     }
     console.log(outputStr.substring(0, outputStr.length - 1));
   }
-  // TODO?: After you're done creating the current global index, we need to write it back to the file
-  // so that the file contains the updated global index
 };
