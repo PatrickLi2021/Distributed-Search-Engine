@@ -1,10 +1,10 @@
 {
-  "name": "cs1380:m0",
+  "name": "cs1380m0",
   "version": "1.0.0",
   "author": {
-    "name": "<first last?>",
-    "email": "<email@brown.edu?>",
-    "cslogin": "<cslogin?>"
+    "name": "Patrick Li",
+    "email": "patrick_li@brown.edu",
+    "cslogin": "pli46"
   },
   "description": "A set of components for cs1380's search engine.",
   "dependencies": {
@@ -24,8 +24,9 @@
     "jest": "^29.7.0"
   },
   "report": {
-    "hours": 999,
-    "loc": 999,
+    "hours": 20,
+    "sloc": 100,
+    "jsloc": 200,
     "dev": {
       "cpu-no": 999,
       "mem-gb": 999,
@@ -36,6 +37,6 @@
       "aws": [],
       "gs": []
     },
-    "dloc": -99
+    "dloc": 1300
   }
 }

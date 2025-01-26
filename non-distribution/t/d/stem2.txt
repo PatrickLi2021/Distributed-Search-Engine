@@ -1,8 +1,8 @@
 run
 jump
-quick
+quickli
 jump
 car
-fast
-study
-study
+fastest
+studi
+studi

@@ -31,10 +31,21 @@ const path = require('path');
 
 function query(indexFile, args) {
   const input = args.join(' ');
+  const relativePath = path.relative(process.cwd(), __dirname);
+  let stemScript = ''; let processScript = ''; let curPath = '';
+  if (relativePath == '') {
+    stemScript = path.join(relativePath, 'c/stem.js');
+    processScript = path.join(relativePath, 'c/process.sh');
+    curPath = path.join('', indexFile);
+  } else {
+    stemScript = path.join(relativePath, 'c/stem.js');
+    processScript = path.join(relativePath, 'c/process.sh');
+    curPath = path.join('../', indexFile);
+  }
 
   // Stem and process args
   const processedOutput = execSync(
-      `echo "${input}" | ./c/stem.js | ./c/process.sh`,
+      `echo "${input}" | ${stemScript} | ${processScript}`,
       {encoding: 'utf-8'},
   );
   const processedTerms = processedOutput.trim().split('\n');
@@ -42,7 +53,6 @@ function query(indexFile, args) {
   // Read the index file
   // const indexData = fs.readFileSync(indexFile, 'utf-8');
   // const indexLines = indexData.split('\n');
-  const curPath = path.join('', indexFile);
 
   // Build a regular expression from the processed terms
   const searchQuery = processedTerms.join(' ');
