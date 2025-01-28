@@ -1,5 +1,5 @@
 const URL = process.argv[2];
-const terms = process.argv[3]; 
+const terms = process.argv[3];
 
 const countOccurrences = (terms, url) => {
   const termArray = terms.split('\n')

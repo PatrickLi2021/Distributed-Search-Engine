@@ -5,4 +5,10 @@
 # Usage: ./invert.sh url < n-grams
 
 input=$(cat)
-node c/invert.js "$1" "$input"
+
+# Check if the current working directory ends with "/t"
+if [[ "$(pwd)" =~ /t$ ]]; then
+    node ../c/invert.js "$1" "$input"
+else
+    node c/invert.js "$1" "$input"
+fi

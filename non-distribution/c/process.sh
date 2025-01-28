@@ -1,4 +1,9 @@
 #!/bin/bash
 
 input=$(cat)
-node c/process.js "$input"
+
+if [[ "$(pwd)" =~ /t$ ]]; then
+    node ../c/process.js "$input"
+else
+    node c/process.js "$input"
+fi

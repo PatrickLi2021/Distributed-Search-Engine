@@ -4,4 +4,9 @@
 # Usage: ./combine.sh <terms > n-grams
 
 input=$(cat)
-node c/combine.js "$input"
+
+if [[ "$(pwd)" =~ /t$ ]]; then
+    node ../c/combine.js "$input"
+else
+    node c/combine.js "$input"
+fi
