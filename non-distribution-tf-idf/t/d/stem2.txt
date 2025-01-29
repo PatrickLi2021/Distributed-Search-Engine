@@ -1,0 +1,8 @@
+run
+jump
+quickli
+jump
+car
+fastest
+studi
+studi

@@ -1,9 +1,7 @@
 #!/bin/bash
-
-input=$(cat)
-
+INPUT=$(cat)
 if [[ "$(pwd)" =~ /t$ ]]; then
-    node ../c/process.js "$input"
+    cat | node ../c/process.js "$INPUT"
 else
-    node c/process.js "$input"
+    cat | node c/process.js "$INPUT"
 fi
