@@ -25,8 +25,8 @@
   },
   "report": {
     "hours": 20,
-    "sloc": 100,
-    "jsloc": 200,
+    "sloc": 231,
+    "jsloc": 314,
     "dev": {
       "cpu-no": 10,
       "mem-gb": 8.02,
@@ -34,14 +34,14 @@
     },
     "throughput": {
       "dev": [
-        "Crawl: 6.55 ms/URL",
+        "Crawl: 2.92 ms/URL",
         "Index: 0.0432 ms/word",
         "Query: 372.09 ms/word queried"
       ],
       "aws": [
-        "Crawl: 6.55 ms/URL",
-        "Index: ms",
-        "Query: "
+        "Crawl: 2.76 ms/URL",
+        "Index: 0.1036 ms/word",
+        "Query: 1186.165 ms/word queried"
       ],
       "gs": []
     },
