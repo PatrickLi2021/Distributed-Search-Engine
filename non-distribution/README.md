@@ -28,4 +28,4 @@ To characterize correctness, I developed `11` tests that tested each component o
 
 
 ## Wild Guess
-I think that it will take around 4000 lines of code to build the fully distributed, scalable version of the search engine. The reason that I think this is because a lot more support has to be added to incorporate features like sharding, partitioning, etc. Additionally, many more lines have to be added to perhaps support concurrent operations. In total, I think more than 1000 lines will be added to this implementation, so I'll guess around 4000 as a ballpark estimate.
+I think that it will take around 4000 lines of code to build the fully distributed, scalable version of the search engine. The reason that I think this is because a lot more support has to be added to incorporate features like sharding, partitioning, etc. Additionally, many more lines have to be added to perhaps support concurrent operations. In total, I think more than 4000 lines will be added to this implementation, so I'll guess around 4000 as a ballpark estimate.
