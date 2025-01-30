@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const { exec } = require("child_process");
-const { performance } = require("perf_hooks");
+const {exec} = require('child_process');
+const {performance} = require('perf_hooks');
 
-const scriptPath = "../../crawl.sh";
-const inputURL = "../../d/urls.txt";
+const scriptPath = '../../crawl.sh';
+const inputURL = '../../d/urls.txt';
 
 const start = performance.now();
 

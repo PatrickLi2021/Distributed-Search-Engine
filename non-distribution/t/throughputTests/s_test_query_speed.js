@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-const { exec } = require("child_process");
-const { performance } = require("perf_hooks");
+const {exec} = require('child_process');
+const {performance} = require('perf_hooks');
 
-const query = "../../query.js";
-const term = "stuff"
+const query = '../../query.js';
+const term = 'stuff';
 
-start = performance.now();
+const start = performance.now();
 exec(`${query} ${term}`, (error, stdout, stderr) => {
   exec(`${query} ${term}`, (error, stdout, stderr) => {
     const end = performance.now();

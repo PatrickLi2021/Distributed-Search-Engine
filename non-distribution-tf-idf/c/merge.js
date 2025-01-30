@@ -37,7 +37,6 @@ const readline = require('readline');
 // const path = require('path');
 
 const corpSize = require('fs').readFileSync('d/visited.txt', 'utf8').split('\n').length;
-console.error('corp size:', corpSize);
 
 // The `compare` function can be used for sorting.
 const compare = (a, b) => {
