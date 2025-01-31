@@ -7,30 +7,29 @@
 */
 
 const distribution = require('../../config.js');
+const util = distribution.util;
 
 test('(1 pts) student test', () => {
-  // Fill out this test case...
-    throw new Error('Not implemented');
+expect(util.deserialize(util.serialize(55))).toBe(55);
+  expect(util.deserialize(util.serialize(0.5))).toBe(0.5);
 });
 
 
 test('(1 pts) student test', () => {
-  // Fill out this test case...
-    throw new Error('Not implemented');
+  expect(util.deserialize(util.serialize(true))).toBe(true);
+  expect(util.deserialize(util.serialize(false))).toBe(false);
 });
 
 
 test('(1 pts) student test', () => {
-  // Fill out this test case...
-    throw new Error('Not implemented');
+  expect(util.deserialize(util.serialize(null))).toBe(null);
 });
 
 test('(1 pts) student test', () => {
-  // Fill out this test case...
-    throw new Error('Not implemented');
+  expect(util.deserialize(util.serialize("hello"))).toBe("hello");
+  expect(util.deserialize(util.serialize(""))).toBe("");
 });
 
 test('(1 pts) student test', () => {
-  // Fill out this test case...
-    throw new Error('Not implemented');
+  expect(util.deserialize(util.serialize(undefined))).toBe(undefined);
 });

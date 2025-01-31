@@ -11,7 +11,7 @@
     "eslint": "^8.55.0",
     "eslint-config-google": "^0.14.0",
     "javascript-obfuscator": "^4.1.0",
-    "jest": "^27.4.7"
+    "jest": "^27.5.1"
   },
   "scripts": {
     "pretest": "./scripts/pretest.sh",
@@ -22,8 +22,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "yargs": "^17.7.2",
-    "@brown-ds/distribution": "latest"
+    "@brown-ds/distribution": "^0.1.7",
+    "yargs": "^17.7.2"
   },
   "report": {
     "hours": 999,
