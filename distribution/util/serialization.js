@@ -1,3 +1,4 @@
+const { parsed } = require("yargs");
 
 function serialize(object) {
   // Support serialization for base types
@@ -8,7 +9,7 @@ function serialize(object) {
     return `{"type": "Boolean", "value": "${object.toString()}"}`;
   }
   if (typeof object === "string") {
-    return `{"type": "String", "value": "${object.toString()}"}`;
+    return JSON.stringify({ type: "String", value: object });
   }
   if (object === null) {
     return `{"type": "Null", "value": "${String(object)}"}`;
@@ -20,15 +21,36 @@ function serialize(object) {
   // Add support for Function types
   if (typeof object === "function") {
     const functionString = object.toString();
-    return `{"type": "Function", "value": "${functionString}"}`
+    return `{"type": "Function", "value": "${functionString}"}`;
   } 
+  // Serialize Date, Error, and array
+  if (object instanceof Date) {
+    return `{"type": "Date", "value": "${object.toISOString()}"}`;
+  }
+  if (object instanceof Error) {
+    return `{"type": "Error", "value": "${object.message}"}`;
+  }
+  if (Array.isArray(object)) {
+    let arrPayload = object.map(elem => serialize(elem)).join(", ");
+    return `{"type": "Array", "value": [${arrPayload}]}`; 
+  }
+  // Serialize objects
+  if (typeof object === "object") {
+    let objPayload = [];
+    for (const key in object) {
+      objPayload.push({ key: serialize(key), value: serialize(object[key]) });
+    }
+    const objString = JSON.stringify({
+      type: "Object",
+      value: objPayload,
+    });
+    return objString;
+  }
 }
-
 
 function deserialize(string) {
   // Support deserialization for base types
-  let obj = JSON.parse(string);
-  console.log(obj);
+  const obj = JSON.parse(string);
   if (obj.type === "Number") return Number(obj.value);
   if (obj.type === "Boolean") return obj.value === "true";
   if (obj.type === "String") return obj.value;
@@ -37,11 +59,31 @@ function deserialize(string) {
 
   // Support deserialization for functions
   if (obj.type === "Function") {
-    const match = funcString.match(/\(([^)]*)\)\s*=>\s*(.*)/); // func structure pattern match
-    const args = match[1];
-    const body = match[2];
-    return new Function(args, `return ${body}`)
+    return new Function(`return ${obj.value}`)();
   }
+  // Support deserialization for Error and Date
+  if (obj.type === "Date") {
+    return new Date(obj.value);
+  }
+  if (obj.type === "Error") {
+    const error = new Error();
+    error.message = obj.value;
+    return error;
+  }
+  // Support deserialization for arrays and objects
+  if (obj.type === "Array") {
+    const des = obj.value.map(elem => deserialize(JSON.stringify(elem)));
+    return des;
+  }
+  if (obj.type === "Object") {
+    let deserializedObj = {};
+    obj.value.forEach(elem => {
+      const deserializedKey = deserialize(elem.key); 
+      const deserializedVal = deserialize(elem.value); 
+      deserializedObj[deserializedKey] = deserializedVal;
+      })
+    return deserializedObj;
+  };
 }
 
 module.exports = {
