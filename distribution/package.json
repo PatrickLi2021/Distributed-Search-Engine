@@ -43,7 +43,11 @@
                 "Functions: 0.0167 ms/operation",
                 "Complex, Recursive Structures: 0.0708 ms/operation"
             ],
-            "aws": []
+            "aws": [
+                "Base Structures: 0.0417 ms/operation",
+                "Functions: 0.0324 ms/operation",
+                "Complex, Recursive Structures: 0.1063 ms/operation"
+            ]
         },
         "dloc": -99
     }
