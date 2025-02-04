@@ -1,39 +1,54 @@
 {
-  "name": "cs1380-stencil",
-  "version": "0.1.6",
-  "description": "A library for building distributed systems.",
-  "main": "distribution.js",
-  "useLibrary": true,
-  "directories": {
-    "test": "test"
-  },
-  "devDependencies": {
-    "eslint": "^8.55.0",
-    "eslint-config-google": "^0.14.0",
-    "javascript-obfuscator": "^4.1.0",
-    "jest": "^29.7.0"
-  },
-  "report": {
-    "hours": 20,
-    "sloc": 231,
-    "jsloc": 314,
-    "dev": {
-      "cpu-no": 10,
-      "mem-gb": 8.02,
-      "ssd-gb": 59
+    "name": "cs1380-stencil",
+    "version": "0.1.6",
+    "description": "A library for building distributed systems.",
+    "main": "distribution.js",
+    "useLibrary": false,
+    "directories": {
+        "test": "test"
     },
-    "throughput": {
-      "dev": [
-        "Crawl: 2.92 ms/URL",
-        "Index: 0.0432 ms/word",
-        "Query: 372.09 ms/word queried"
-      ],
-      "aws": [
-        "Crawl: 2.76 ms/URL",
-        "Index: 0.1036 ms/word",
-        "Query: 1186.165 ms/word queried"
-      ],
-      "gs": []
+    "devDependencies": {
+        "eslint": "^8.55.0",
+        "eslint-config-google": "^0.14.0",
+        "javascript-obfuscator": "^4.1.0",
+        "jest": "^27.5.1"
+    },
+    "scripts": {
+        "pretest": "./scripts/pretest.sh",
+        "test": "./scripts/test.sh",
+        "build": "./scripts/publish.sh",
+        "lint": "eslint --ignore-path .gitignore --config .eslintrc . --fix"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@brown-ds/distribution": "^0.1.7",
+        "yargs": "^17.7.2"
+    },
+    "report": {
+        "hours": 7,
+        "loc": 80,
+        "dev": {
+            "cpu-no": 10,
+            "mem-gb": 8.02,
+            "ssd-gb": 59
+        },
+        "throughput": {
+            "dev": [],
+            "aws": []
+        },
+        "latency": {
+            "dev": [
+                "Base Structures: 0.0228 ms/operation",
+                "Functions: 0.0167 ms/operation",
+                "Complex, Recursive Structures: 0.0708 ms/operation"
+            ],
+            "aws": [
+                "Base Structures: 0.0417 ms/operation",
+                "Functions: 0.0324 ms/operation",
+                "Complex, Recursive Structures: 0.1063 ms/operation"
+            ]
+        },
+        "dloc": -99
     }
-  }
 }

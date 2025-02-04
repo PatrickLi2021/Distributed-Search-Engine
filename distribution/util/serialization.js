@@ -1,4 +1,31 @@
 const { parsed } = require("yargs");
+const crypto = require('crypto');
+const { fstat } = require("fs");
+
+// Used for serializing and deserializing circular objects
+let deserializeMap = new Map();
+let serializeMap = new Map();
+
+// Used for serializing and deserializing native objects
+const nativeObjects = new Set(require("repl")._builtinLibs);
+nativeObjects.add("global");
+console.log(nativeObjects);
+
+function getNativeFunctionPath(fn) {
+  for (const moduleName of nativeObjects) {
+      try {
+          const mod = require(moduleName);
+          for (const key in mod) {
+              if (mod[key] === fn) {
+                  return `${moduleName}.${key}`;
+              }
+          }
+      } catch (err) {
+          continue; 
+      }
+  }
+  return null;
+}
 
 function serialize(object) {
   // Support serialization for base types
@@ -20,8 +47,13 @@ function serialize(object) {
 
   // Add support for Function types
   if (typeof object === "function") {
-    const functionString = object.toString();
-    return `{"type": "Function", "value": "${functionString}"}`;
+    const nativePath = getNativeFunctionPath(object);
+    if (nativePath) {
+      return `{"type": "Native", "value": "${nativePath}"}`;
+    } else {
+      const functionString = object.toString();
+      return `{"type": "Function", "value": "${functionString}"}`;
+    }
   } 
   // Serialize Date, Error, and array
   if (object instanceof Date) {
@@ -31,14 +63,23 @@ function serialize(object) {
     return `{"type": "Error", "value": "${object.message}"}`;
   }
   if (Array.isArray(object)) {
-    let arrPayload = object.map(elem => serialize(elem)).join(", ");
+    let arrPayload = object.map(elem => serialize(elem, new Map())).join(", ");
     return `{"type": "Array", "value": [${arrPayload}]}`; 
   }
   // Serialize objects
+  if (serializeMap.has(object)) {
+    return `{"type": "Circular", "value": "${serializeMap.get(object)}"}`;
+  }
   if (typeof object === "object") {
+    const objId = crypto.randomUUID();
+    serializeMap.set(object, objId);
+    deserializeMap.set(objId, object);
+
+    // Handle normal case
     let objPayload = [];
     for (const key in object) {
-      objPayload.push({ key: serialize(key), value: serialize(object[key]) });
+      const serializedObj = { key: serialize(key), value: serialize(object[key]) };
+      objPayload.push(serializedObj);
     }
     const objString = JSON.stringify({
       type: "Object",
@@ -61,6 +102,14 @@ function deserialize(string) {
   if (obj.type === "Function") {
     return new Function(`return ${obj.value}`)();
   }
+  if (obj.type === "Native") {
+    const parts = obj.value.split(".");
+    const moduleName = parts[0];
+    const functionName = parts.slice(1).join(".");
+    const mod = require(moduleName);
+    return mod[functionName];
+  }
+
   // Support deserialization for Error and Date
   if (obj.type === "Date") {
     return new Date(obj.value);
@@ -74,6 +123,9 @@ function deserialize(string) {
   if (obj.type === "Array") {
     const des = obj.value.map(elem => deserialize(JSON.stringify(elem)));
     return des;
+  }
+  if (obj.type === "Circular") {
+    return deserializeMap.get(obj.value);
   }
   if (obj.type === "Object") {
     let deserializedObj = {};

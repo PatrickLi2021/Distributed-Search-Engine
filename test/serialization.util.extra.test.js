@@ -27,7 +27,7 @@ test('(5 pts) serializeNativeFunction', () => {
 });
 
 test('(5 pts) serializeAnotherNativeFunction', () => {
-  const fn = require('console').log;
+  const fn = fs.readFile;
   const serialized = util.serialize(fn);
   const deserialized = util.deserialize(serialized);
   // Native function serialization might not work as expected
