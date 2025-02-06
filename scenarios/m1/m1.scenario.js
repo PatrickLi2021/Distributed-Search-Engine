@@ -1,7 +1,6 @@
 const distribution = require('../../config.js');
 const util = distribution.util;
 
-// TODO: In order to run this test file, I had to change the name?
 test('(3 pts) (scenario) 40 bytes object', () => {
   /*
           Come up with a JavaScript object, which when serialized,
@@ -98,5 +97,3 @@ test('(3 pts) (scenario) malformed serialized string', () => {
     util.deserialize(malformedSerializedString);
   }).toThrow(SyntaxError);
 });
-
-

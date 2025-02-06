@@ -35,3 +35,7 @@ serializeTester({a: 1, b: 2, c: 3, d: 4});
 serializeTester({a: 1, b: 2, c: 3, d: 4}); 
 const endTime3 = performance.now();
 console.log(`Average Workload Time: ${(endTime3 - startTime3).toFixed(4) / 4} ms`);
+
+test('placeholder test', () => {
+  expect(1).toBe(1);
+});

@@ -95,20 +95,18 @@ For `Array`s and `Object`s, I utilize an iterative approach that goes through ev
 #### Deserialization
 For deserialization in most cases, I use the `JSON.parse()` function to convert the string into a JavaScript value and object from which I can retrieve values from. The overall structure for each of the cases remains mostly the same as the serialization function, just in the opposite direction.
 
+### Lab Portion
+The lab portion included providing support for cyclic objects and native functions. For cyclic objects, I utilized a map to encode cycles where each item in the object that has been seen before maps to a previously-allocated ID stored in that map. I use the `crypto` library in JavaScript to generate random, unique IDs. For native objects/functions, I use the library of built-in modules (require(‘repl’)._builtinLibs) in order to keep track of which functions are considered native.
+
 ### Key Challenges
-The key challenges of this implementation included searching for the correct functions to be used to serialize and deserialize each data type and maintaining consistency between each of the serialized and deserialized values when testing.
-
-> Summarize your implementation, including key challenges you encountered. Remember to update the `report` section of the `package.json` file with the total number of hours it took you to complete each task of M1 (`hours`) and the lines of code per task.
-
-My implementation comprises `<number>` software components, totaling `<number>` lines of code. Key challenges included `<1, 2, 3 + how you solved them>`.
-
+The main challenges of this milestone were deeply analyzing the structure of functions and cyclic objects (for the lab portion) and determining which JavaScript or JSON functions should be used.
 
 ### Correctness & Performance Characterization
 
 #### Correctness
-I wrote `16` tests; these tests take `0.304 seconds` to execute. This includes objects with base types like numbers, booleans, strings, undefined and null. Additionally, I tested on a variety of more complex types like arrays and objects. For these types, I tested arrays with varying data types, nested arrays, deeply-nested objects with varying key and value types, etc. These tests are located in the `m1.student.test.js` file in the `/test` directory.
+I wrote `16` tests; these tests take `0.304 seconds` to execute. This includes objects with base types like numbers, booleans, strings, undefined and null. Additionally, I tested on a variety of more complex types like arrays and objects. For these types, I tested arrays with varying data types, nested arrays, deeply-nested objects with varying key and value types, etc. These tests are located in the `m1.student.test.js` file in the `/test` directory. They are essentially testing if the starting object/structure before serialization is the same after the serialized version of this object is deserialized in order to maintain a consistent structure/protocol.
 
 #### Performance
-The latency of various subsystems is described in the `"latency"` portion of package.json. The characteristics of my development machines are summarized in the `"dev"` portion of package.json. To sum up, I created a file that tests the average latency of the 3 different workloads of this milestone. This test file is called `m1.latency.test.js`. It is located at `test/test-student`. Note that this latency test file uses the term "operation". For the purposes of this test, an operation consists of executing both the serialize and deserialize functions on a workload/data type.
+The latency of various subsystems is described in the `"latency"` portion of package.json. The characteristics of my development machines are summarized in the `"dev"` portion of package.json. To sum up, I created a file that executes the average latency of the 3 different workloads of this milestone (base structures, functions, and complex/recursive structures/objects). This file is called `m1.latency.js`. It is located at `test/test-student`. When measuring latency, I decided to use the `performance.now()` library in node. The numbers included in the `package.json` file are the latencies per operation, measured in milliseconds. Note that this latency test file uses the term "operation". For the purposes of this test, an operation consists of executing both the serialize and deserialize functions on a workload/data type.
 
 > ...
