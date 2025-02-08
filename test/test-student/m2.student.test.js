@@ -6,10 +6,14 @@
     Imporant: Do not modify any of the test headers (i.e., the test('header', ...) part). Doing so will result in grading penalties.
 */
 
+const util = require('@brown-ds/distribution/distribution/util/util.js');
 const distribution = require('../../config.js');
 
 test('(1 pts) student test', (done) => {
-  // Fill out this test case...
+  // Testing status get() functionality
+  const original = [[1, 2], [3, [4, 5]], []];
+  const serialized = util.(original);
+  expect(original).toEqual(util.deserialize(serialized));
 });
 
 

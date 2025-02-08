@@ -1,5 +1,5 @@
 const distribution = require('../../config.js');
-const util = require('/usr/src/app/distribution/util/util.js');
+const util = distribution.util;
 
 test('(2 pts) (scenario) simple callback practice', () => {
   /* Collect the result of 3 callback services in list  */
@@ -90,16 +90,17 @@ test('(2 pts) (scenario) collect errors and successful results', (done) => {
   }
 });
 
-test.only('(5 pts) (scenario) use rpc', (done) => {
+test('(5 pts) (scenario) use rpc', (done) => {
   let n = 0;
   let addOne = () => {
     return ++n;
   };
 
-  const node = {ip: '127.0.0.1', port: 9004};
+  const node = {ip: '127.0.0.1', port: 9001};
 
-  addOne = [{do: util.wire.createRPC(util.wire.toAsync(addOne))}, 'addOneService'];
-  
+  // Place the RPC stub for addOne on node
+  addOne = util.wire.createRPC(util.wire.toAsync(addOne));
+
   const rpcService = {
     addOne: addOne,
   };

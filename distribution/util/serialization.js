@@ -9,7 +9,6 @@ let serializeMap = new Map();
 // Used for serializing and deserializing native objects
 const nativeObjects = new Set(require("repl")._builtinLibs);
 nativeObjects.add("global");
-console.log(nativeObjects);
 
 function getNativeFunctionPath(fn) {
   for (const moduleName of nativeObjects) {

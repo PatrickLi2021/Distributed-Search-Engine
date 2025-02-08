@@ -1,6 +1,8 @@
 const http = require('http');
 const url = require('url');
 const log = require('../util/log');
+const routes = require('../local/routes');
+// const routes = require('../all/routes');
 
 
 /*
@@ -14,18 +16,20 @@ const start = function(callback) {
   const server = http.createServer((req, res) => {
     /* Your server will be listening for PUT requests. */
 
-    // Write some code...
+    if (req.method == "PUT") {
 
+      /*
+        The path of the http request will determine the service to be used.
+        The url will have the form: http://node_ip:node_port/service/method
+      */
 
-    /*
-      The path of the http request will determine the service to be used.
-      The url will have the form: http://node_ip:node_port/service/method
-    */
-
-
-    // Write some code...
-
-
+      const parsedUrl = url.parse(req.url, true);
+      const pathSegments = parsedUrl.pathname.split('/').filter(Boolean); 
+      const service = pathSegments[0];
+      const method = pathSegments[1];
+      const nodeIP = parsedUrl.hostname;
+      const nodePort = parsedUrl.port;
+    
     /*
 
       A common pattern in handling HTTP requests in Node.js is to have a
@@ -40,24 +44,36 @@ const start = function(callback) {
 
       Our nodes expect data in JSON format.
   */
+      let body = "";
+      let jsonData = null;
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
 
-    // Write some code...
-
+      req.on('end', () => {
+        try {
+          jsonData = JSON.parse(body);
+        } catch (error) {
+          console.log("Error occurred when parsing the JSON: ", error)
+        }
+      });
 
       /* Here, you can handle the service requests. */
-
-      // Write some code...
-
+      let node = {"ip": nodeIP, "port": nodePort};
+      const remote = {"node": node, "service": serviceName, "method": methodName};
       const serviceName = service;
+      const methodName = method;
 
-
-
-        // Write some code...
-
+      /* Pass the payload to routes */
+      if (methodName == 'put') {
+        routes.put(jsonData, serviceName, callback);
+      } else if (methodName == 'get') {
+        routes.get(serviceName, callback);
+      } else if (methodName == 'rem') {
+        routes.rem(serviceName, callback);
+      }
+    }
   });
-
-
-  // Write some code...
 
   /*
     Your server will be listening on the port and ip specified in the config
