@@ -2,6 +2,10 @@
 
 
 let serviceMap = new Map();
+serviceMap.set('status', {});
+serviceMap.set('routes', {});
+serviceMap.set('comm', {});
+
 
 /**
  * @param {string} configuration
@@ -9,12 +13,14 @@ let serviceMap = new Map();
  * @return {void}
  */
 function get(configuration, callback) { // configuration is the same as the service name
+    if (Array.isArray(configuration)) {
+        configuration = configuration[0];
+    }
     if (serviceMap.has(configuration)) {
         return callback(null, serviceMap.get(configuration));
     } else {
         return callback(new Error("Service not in map"), null);
     }
-    return;
 }
 
 /**
