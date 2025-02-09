@@ -1,6 +1,6 @@
 {
     "name": "cs1380-stencil",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "description": "A library for building distributed systems.",
     "main": "distribution.js",
     "useLibrary": false,
@@ -11,7 +11,7 @@
         "eslint": "^8.55.0",
         "eslint-config-google": "^0.14.0",
         "javascript-obfuscator": "^4.1.0",
-        "jest": "^27.5.1"
+        "jest": "^27.4.7"
     },
     "scripts": {
         "pretest": "./scripts/pretest.sh",
@@ -22,56 +22,24 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "@brown-ds/distribution": "^0.1.7",
-        "yargs": "^17.7.2"
+        "yargs": "^17.7.2",
+        "@brown-ds/distribution": "latest"
     },
-    "reportm0": {
-        "hours": 20,
-        "sloc": 231,
-        "jsloc": 314,
+    "report": {
+        "hours": 999,
+        "loc": 999,
         "dev": {
-            "cpu-no": 10,
-            "mem-gb": 8.02,
-            "ssd-gb": 59
-        },
-        "throughput": {
-            "dev": [
-                "Crawl: 2.92 ms/URL",
-                "Index: 0.0432 ms/word",
-                "Query: 372.09 ms/word queried"
-            ],
-            "aws": [
-                "Crawl: 2.76 ms/URL",
-                "Index: 0.1036 ms/word",
-                "Query: 1186.165 ms/word queried"
-            ],
-            "gs": []
-        },
-        "dloc": 1300
-    },
-    "reportm1": {
-        "hours": 8,
-        "loc": 80,
-        "dev": {
-            "cpu-no": 10,
-            "mem-gb": 8.02,
-            "ssd-gb": 59
+            "cpu-no": 999,
+            "mem-gb": 999,
+            "ssd-gb": 999
         },
         "throughput": {
             "dev": [],
             "aws": []
         },
         "latency": {
-            "dev": [
-                "Base Structures: 0.03095 ms/operation",
-                "Functions: 4.3730 ms/operation",
-                "Complex, Recursive Structures: 0.0949 ms/operation"
-            ],
-            "aws": [
-                "Base Structures: 0.0417 ms/operation",
-                "Functions: 5.2312 ms/operation",
-                "Complex, Recursive Structures: 0.1034 ms/operation"
-            ]
+            "dev": [],
+            "aws": []
         },
         "dloc": -99
     }

@@ -106,6 +106,7 @@ test('(5 pts) (scenario) use rpc', (done) => {
   };
 
   distribution.node.start((server) => {
+    console.log("Here is server: ", server);
     function cleanup(callback) {
       server.close();
       distribution.local.comm.send([],

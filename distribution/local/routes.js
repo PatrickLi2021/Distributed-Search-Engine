@@ -8,11 +8,11 @@ let serviceMap = new Map();
  * @param {Callback} callback
  * @return {void}
  */
-function get(configuration, callback) {
+function get(configuration, callback) { // configuration is the same as the service name
     if (serviceMap.has(configuration)) {
-        callback(null, serviceMap.get(configuration));
+        return callback(null, serviceMap.get(configuration));
     } else {
-        callback(new Error("Service not in map"), null);
+        return callback(new Error("Service not in map"), null);
     }
     return;
 }

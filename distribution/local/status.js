@@ -20,11 +20,11 @@ status.get = function(configuration, callback) {
     callback(null, process.memoryUsage().heapUsed);
     return;
   }
-  if (configuration === 'sid') {
+  if (Array.isArray(configuration) && configuration.includes('sid')) {
     callback(null, global.moreStatus["sid"]);
     return;
   }
-  if (configuration === 'nid') {
+  if (Array.isArray(configuration) && configuration.includes('nid')) {
     callback(null, global.moreStatus["nid"]);
     return;
   }

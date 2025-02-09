@@ -8,12 +8,11 @@
 
 const util = require('@brown-ds/distribution/distribution/util/util.js');
 const distribution = require('../../config.js');
+const local = distribution.local;
 
 test('(1 pts) student test', (done) => {
-  // Testing status get() functionality
-  const original = [[1, 2], [3, [4, 5]], []];
-  const serialized = util.(original);
-  expect(original).toEqual(util.deserialize(serialized));
+  // Fill out this test case...
+  done(new Error('Not implemented'));
 });
 
 
