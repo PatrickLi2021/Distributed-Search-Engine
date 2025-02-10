@@ -1,5 +1,6 @@
 /** @typedef {import("../types").Callback} Callback */
 /** @typedef {import("../types").Node} Node */
+const distribution = require("@brown-ds/distribution");
 const http = require('node:http');
 
 
@@ -17,8 +18,7 @@ const http = require('node:http');
  * @return {void}
  */
 function send(message, remote, callback) {
-    
-    const data = JSON.stringify(message);
+    const data = distribution.util.serialize(message);
 
     // Create options
     const options = {

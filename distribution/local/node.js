@@ -2,6 +2,8 @@ const http = require('http');
 const url = require('url');
 const log = require('../util/log');
 const routes = require('../local/routes');
+const util = require('../util/util');
+const distribution = require('@brown-ds/distribution');
 
 /*
     The start function will be called to start your node. It will take a callback as an argument.
@@ -10,7 +12,6 @@ const routes = require('../local/routes');
 
 const start = function(callback) {
   const server = http.createServer((req, res) => {
-    
     // Listen only for PUT requests
     if (req.method == "PUT") {
       
@@ -36,7 +37,7 @@ const start = function(callback) {
       req.on('end', () => {
         let jsonData = null;
         try {
-            jsonData = JSON.parse(body);
+            jsonData = distribution.util.deserialize(body);
         } catch (error) {
             res.statusCode = 400; 
             res.end('Invalid JSON format');
