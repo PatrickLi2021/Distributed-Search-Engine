@@ -7,6 +7,7 @@ global.moreStatus = {
   sid: id.getSID(global.nodeConfig),
   nid: id.getNID(global.nodeConfig),
   counts: 0,
+  toLocal: new Map(),
 };
 
 status.get = function(configuration, callback) {
@@ -43,11 +44,10 @@ status.get = function(configuration, callback) {
   callback(new Error('Status key not found'), null);
 };
 
+const distribution = require('@brown-ds/distribution')
 
-status.spawn = function(configuration, callback) {
-};
+status.spawn = distribution.local.status.spawn;
 
-status.stop = function(callback) {
-};
+status.stop = distribution.local.status.stop;
 
 module.exports = status;

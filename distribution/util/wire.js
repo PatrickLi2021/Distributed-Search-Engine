@@ -1,8 +1,44 @@
+const distribution = require('@brown-ds/distribution');
 const log = require('../util/log');
+const crypto = require('crypto');
 
+
+const nodeIP = global.nodeConfig.ip;
+const nodePort = global.nodeConfig.port;
+const node = {ip: String(nodeIP), port: nodePort};
 
 function createRPC(func) {
-  // Write some code...
+  // func is by default asynchronous
+  if (typeof func !== 'function') {
+    return new Error('createRPC expects a function as input');
+  }
+
+  // Add function to toLocal
+  const remotePointer = crypto.randomBytes(16).toString('hex');
+  global.moreStatus.toLocal.set(remotePointer, func); // stores string hashes to actual functions
+
+  // Create RPC stub and return it
+  function stub(...args) {
+    const callback = args.pop();
+    args = args.map((arg) => distribution.util.serialize(arg)); 
+
+    if (typeof callback !== 'function') {
+      return new Error('The last argument must be a callback function');
+    }
+
+    const remote = { node: `${node}`, service: `${remotePointer}`, method: 'call' };
+
+    // Send serialized args to node where func resides
+    distribution.local.comm.send(args, remote, (error, response) => {
+      if (error) {
+        callback(error);
+      } else {
+        callback(null, response);
+      }
+    });
+  }
+  console.log("finished createRPC");
+  return stub;
 }
 
 /*

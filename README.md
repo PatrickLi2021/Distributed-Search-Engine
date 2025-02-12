@@ -109,4 +109,35 @@ I wrote `16` tests; these tests take `0.304 seconds` to execute. This includes o
 #### Performance
 The latency of various subsystems is described in the `"latency"` portion of package.json. The characteristics of my development machines are summarized in the `"dev"` portion of package.json. To sum up, I created a file that executes the average latency of the 3 different workloads of this milestone (base structures, functions, and complex/recursive structures/objects). This file is called `m1.latency.js`. It is located at `test/test-student`. When measuring latency, I decided to use the `performance.now()` library in node. The numbers included in the `package.json` file are the latencies per operation, measured in milliseconds. Note that this latency test file uses the term "operation". For the purposes of this test, an operation consists of executing both the serialize and deserialize functions on a workload/data type.
 
+## M2: Actors and Remote Procedure Calls (RPC)
+
+### Summary of Implementation and Key Challenges
+
+This milestone introduced the idea of nodes and having point-to-point communication between different nodes in our distributed system. The main functionality that was implemented was having each node maintain service bindings (namely `status`, `routes`, and `comm`), handle communication with other nodes (via `comm.send` and `node.js`, which implements the node's listening server), and execute incoming requests from other nodes. Each node is identified by an IP address and a port number. 
+
+The implementation consisted of 5 key components: the listening server (`node.js`), message sending function (`comm.js`), the service binding API (`routes`), and the status API (`status.`). 
+
+The request infrastructure was implemented and housed in `comm.js`. This file consisted of 1 main function, `send()`, which serialized the input message, configured options, and ultimately issued an HTTP PUT request and received the corresponding request.
+
+The listening server was implemented as as a remote HTTP server that simply listened for HTTP PUT requests, extracted the service and method from the path, and then read in the data sent in the request payload. From there, the server used the `routes` interface to retrieve the service map and call the appropriate function, sending the result back to the client.
+
+In `status`, the only function that was implemented was `status.get`. This was used for retriving node-related information such as the IP, port, memory usage, NID, SID, and others. This function utilized continuous passing via  a callback to communicate its return status. `routes` was implemented in a similar way in that it used a `serviceMap` defined locally to map between names and service objects, responsible for handling services to be invoked.
+
+The main challenges that I faced during this milestone were understanding the structure and schema of nodes, services, and methods, as well as getting a strong grasp on how each of the disparate components fit together. In order to overcome these challenges, I made sure to get a thorough look at the codebase before and during the actual implementation. I also made sure to look at the tests during implementation to understand the expected behavior of the system.
+
+## Correctness & Performance Characterization
+
+### Correctness
+To characterize the correctness of my implementation, I ran my implementation of the different components to check if my code included basic functionality. From there, I wrote 12 additional unit tests testing various edge cases and more in-depth general functionality. For example, I test for various node properties in `status`, removal of methods using `rem`, combinations of methods using in tandem (i.e. `rem`, `get`), nonexistent services, etc.
+
+### Performance
+I characterized the performance of comm and RPC by sending 1000 service requests in a tight loop. Average throughput and latency is recorded in `package.json`.
+
+## Key Feature
+
+> How would you explain the implementation of `createRPC` to someone who has no background in computer science — i.e., with the minimum jargon possible?
+
+To begin, I would say that in most cases in computing, function calls (AKA a particular task) are executed __locally__, in that the execution of that task takes place on the computer itself. However, sometimes a computer (or node) would like to execute 
+
+
 > ...

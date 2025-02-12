@@ -5,6 +5,7 @@ let serviceMap = new Map();
 serviceMap.set('status', {});
 serviceMap.set('routes', {});
 serviceMap.set('comm', {});
+serviceMap.set('call', {});
 
 
 /**
@@ -19,6 +20,10 @@ function get(configuration, callback) { // configuration is the same as the serv
     if (serviceMap.has(configuration)) {
         return callback(null, serviceMap.get(configuration));
     } else {
+        if (global.moreStatus.toLocal.has(configuration)) {
+            const localFuncPtr = global.moreStatus.toLocal.get(configuration);
+            return callback(null, localFuncPtr);
+        }
         return callback(new Error("Service not in map"), null);
     }
 }
