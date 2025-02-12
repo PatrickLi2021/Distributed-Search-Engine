@@ -1,96 +1,34 @@
-const distribution = require('../../config.js');
+const distribution = require('../config.js');
+const node = distribution.node.config;
+const local = distribution.local;
 const util = distribution.util;
+const { performance } = require('perf_hooks');
 
-test('(2 pts) (scenario) simple callback practice', () => {
-  /* Collect the result of 3 callback services in list  */
-  const results = [];
-
-  function add(a, b, callback) {
-    const result = a + b;
-    callback(result);
-  }
-
-  function storeResults(result) {
-    results.push(result);
-  }
-
-  // Call add 3 different times with storeResults as the callback
-  add(1, 2, storeResults);
-  add(2, 3, storeResults);
-  add(3, 4, storeResults);
-  expect(results).toEqual([3, 5, 7]);
-});
-
-test('(2 pts) (scenario) collect errors and successful results', (done) => {
-  /*
-          Call each delivery service in a loop, and collect the sucessful results and
-          failures in an array.
-      */
-
-  // Sample service
-  const appleDeliveryService = (callback) => {
-    callback(null, "good apples");
-  };
-
-  const pineappleDeliveryService = (callback) => {
-    callback(new Error("bad pineapples"), null)
-  };
-
-  const bananaDeliveryService = (callback) => {
-    callback(null, "good bananas");
-  };
-
-  const peachDeliveryService = (callback) => {
-    callback(null, "good peaches");
-  };
-
-  const mangoDeliveryService = (callback) => {
-    callback(new Error("bad mangoes"), null);
-  };
-
-  const services = [
-    appleDeliveryService, pineappleDeliveryService, bananaDeliveryService,
-    peachDeliveryService, mangoDeliveryService,
-  ];
-
-  const doneAndAssert = (es, vs) => {
-    try {
-      expect(vs.length).toBe(3);
-      expect(vs).toContain('good apples');
-      expect(vs).toContain('good bananas');
-      expect(vs).toContain('good peaches');
-      for (const e of es) {
-        expect(e instanceof Error).toBe(true);
-      }
-      const messages = es.map((e) => e.message);
-      expect(messages.length).toBe(2);
-      expect(messages).toContain('bad pineapples');
-      expect(messages).toContain('bad mangoes');
-      done();
-    } catch (e) {
-      done(e);
-    }
-  };
-
-  const vs = [];
-  const es = [];
-  let expecting = services.length;
-  for (const service of services) {
-    service((e, v) => {
-      if (e) {
-        es.push(e);
-      } else {
-        vs.push(v);
-      }
-      expecting -= 1;
-      if (expecting === 0) {
-        doneAndAssert(es, vs);
+// NOTE: I use this file to calculate both throughput and latency
+const start = performance.now();
+for (let i = 0; i < 1000; i++) {
+test('Latency/Throughput Test for comm', (done) => {
+    const remote = {node: node, service: 'status', method: 'get'};
+    const message = ['heapTotal']; 
+  
+    local.comm.send(message, remote, (e, v) => {
+      try {
+        expect(e).toBeFalsy();
+        expect(v).toBe(process.memoryUsage().heapTotal);
+        done();
+      } catch (error) {
+        done(error);
       }
     });
-  }
-});
+  });
+}
+const end = performance.now();
+console.log("Total Time: ", (end - start).toFixed(2));
 
-test('(5 pts) (scenario) use rpc', (done) => {
+
+const start2 = performance.now();
+for (let i = 0; i < 1000; i++) {
+test('Latency/Throughput Test for RPC', (done) => {
   let n = 0;
   const addOne = () => {
     return ++n;
@@ -144,4 +82,19 @@ test('(5 pts) (scenario) use rpc', (done) => {
           });
     });
   });
-});
+})};
+const end2 = performance.now();
+console.log("Total Time: ", (end2 - start2).toFixed(2));
+
+
+beforeAll((done) => {
+    distribution.node.start((server) => {
+      localServer = server;
+      done();
+    });
+  });
+  
+  afterAll((done) => {
+    localServer.close();
+    done();
+  });

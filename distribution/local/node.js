@@ -9,6 +9,13 @@ const distribution = require('@brown-ds/distribution');
     The start function will be called to start your node. It will take a callback as an argument.
     After your node has booted, you should call the callback.
 */
+function getFirstItem(data) {
+  while (Array.isArray(data) && data.length > 0) {
+    data = data[0]
+  }
+  return data;
+}
+
 
 const start = function(callback) {
   const server = http.createServer((req, res) => {
@@ -33,7 +40,6 @@ const start = function(callback) {
       req.on('data', (chunk) => {
         body += chunk;
       });
-
       req.on('end', () => {
         let jsonData = null;
         try {
@@ -63,6 +69,18 @@ const start = function(callback) {
                       res.end(JSON.stringify(value));
                   }
               });
+          } else if (global.moreStatus.toLocal.has(method)) {
+            let functionToCall = global.moreStatus.toLocal.get(method);
+            jsonData = getFirstItem(jsonData);
+          
+            functionToCall(jsonData, (error, value) => {
+                if (error) {
+                    res.statusCode = 500;
+                    res.end(JSON.stringify({ error: error.message }));
+                } else {
+                    res.end(JSON.stringify(value));
+                }
+            });
           } else {
               console.log(`No function found for service: ${service}, method: ${method}`);
               res.statusCode = 404;

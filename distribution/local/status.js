@@ -13,7 +13,7 @@ global.moreStatus = {
 status.get = function(configuration, callback) {
   callback = callback || function() { };
 
-  if (configuration === 'heapTotal') {
+  if (configuration === 'heapTotal' || configuration.includes('heapTotal')) {
     callback(null, process.memoryUsage().heapTotal);
     return;
   }

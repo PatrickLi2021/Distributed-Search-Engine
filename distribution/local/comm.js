@@ -18,7 +18,9 @@ const http = require('node:http');
  * @return {void}
  */
 function send(message, remote, callback) {
+    console.log("in comm.send first");
     const data = distribution.util.serialize(message);
+    console.log("Send callback: ", callback.toString());
 
     // Create options
     const options = {

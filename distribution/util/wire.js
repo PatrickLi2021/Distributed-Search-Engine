@@ -15,21 +15,21 @@ function createRPC(func) {
 
   // Add function to toLocal
   const remotePointer = crypto.randomBytes(16).toString('hex');
-  global.moreStatus.toLocal.set(remotePointer, func); // stores string hashes to actual functions
+  global.moreStatus.toLocal.set(remotePointer, func); 
 
   // Create RPC stub and return it
   function stub(...args) {
     const callback = args.pop();
-    args = args.map((arg) => distribution.util.serialize(arg)); 
 
     if (typeof callback !== 'function') {
       return new Error('The last argument must be a callback function');
     }
 
-    const remote = { node: `${node}`, service: `${remotePointer}`, method: 'call' };
-
+    const remote = { node: '__NODE_INFO__', service: 'rpc', method: '__HASH__' };
+    let message = args;
+    console.log("IN STUB, MESSAGES: ", message);
     // Send serialized args to node where func resides
-    distribution.local.comm.send(args, remote, (error, response) => {
+    distribution.local.comm.send(message, remote, (error, response) => {
       if (error) {
         callback(error);
       } else {
@@ -37,8 +37,11 @@ function createRPC(func) {
       }
     });
   }
-  console.log("finished createRPC");
-  return stub;
+  let serializedStub = distribution.util.serialize(stub);
+  serializedStub = serializedStub.replace("'__NODE_INFO__'", "{'ip':'" + global.nodeConfig.ip.toString() + "', 'port': " + global.nodeConfig.port.toString() + "}");
+  serializedStub = serializedStub.replace("'__HASH__'", "'" + remotePointer + "'");
+  console.log("DESERIALIZED STUB: ", distribution.util.deserialize(serializedStub).toString());
+  return distribution.util.deserialize(serializedStub);
 }
 
 /*

@@ -125,19 +125,28 @@ In `status`, the only function that was implemented was `status.get`. This was u
 
 The main challenges that I faced during this milestone were understanding the structure and schema of nodes, services, and methods, as well as getting a strong grasp on how each of the disparate components fit together. In order to overcome these challenges, I made sure to get a thorough look at the codebase before and during the actual implementation. I also made sure to look at the tests during implementation to understand the expected behavior of the system.
 
-## Correctness & Performance Characterization
+#### Lab Portion
+For the lab portion of this milestone, I added support for RPCs by implementing the `createRPC` function in `wire.js`. In order to do this, I followed the following procedures:
+1. Serialize arguments and send them to the node where the function to execute resides.
+2. Call the function on that node, passing the deserialized arguments to it upon call.
+3. Serialize the return value and send it back to the node issuing the call to g, the function returned by `createRPC`
+4. Pass the results to that function's caller.
 
-### Correctness
+In order to streamline the function lookup process on the remote node, I made use of a `toLocal` map that stores mappings of remote pointer strings to function pointers.
+
+### Correctness & Performance Characterization
+
+#### Correctness
 To characterize the correctness of my implementation, I ran my implementation of the different components to check if my code included basic functionality. From there, I wrote 12 additional unit tests testing various edge cases and more in-depth general functionality. For example, I test for various node properties in `status`, removal of methods using `rem`, combinations of methods using in tandem (i.e. `rem`, `get`), nonexistent services, etc.
 
-### Performance
-I characterized the performance of comm and RPC by sending 1000 service requests in a tight loop. Average throughput and latency is recorded in `package.json`.
+#### Performance
+I characterized the performance of comm and RPC by sending 1000 service requests in a tight loop and used the `performance.now()` package in Node.js to do this. Average throughput and latency is recorded in `package.json`.
 
-## Key Feature
+### Key Feature
 
 > How would you explain the implementation of `createRPC` to someone who has no background in computer science — i.e., with the minimum jargon possible?
 
-To begin, I would say that in most cases in computing, function calls (AKA a particular task) are executed __locally__, in that the execution of that task takes place on the computer itself. However, sometimes a computer (or node) would like to execute 
+To begin, I would say that in most cases in computing, function calls (AKA a particular task) are executed __locally__, in that the execution of that task takes place on the computer itself. However, sometimes a computer (or node) would like to execute a function that is only available on a remote machine (a machine that is not our own). In order to do this, the remote node/machine sends our node something called an RPC stub, which is essentially an instruction for how to execute that function on the other machine. Once we call the function produced by this stub, it will send a request to that remote node, execute the function there, and the result will be returned back to us.
 
 
 > ...

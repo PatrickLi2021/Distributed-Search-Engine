@@ -5,8 +5,7 @@ let serviceMap = new Map();
 serviceMap.set('status', {});
 serviceMap.set('routes', {});
 serviceMap.set('comm', {});
-serviceMap.set('call', {});
-
+serviceMap.set('rpc', global.moreStatus.toLocal);
 
 /**
  * @param {string} configuration
@@ -14,6 +13,7 @@ serviceMap.set('call', {});
  * @return {void}
  */
 function get(configuration, callback) { // configuration is the same as the service name
+    console.log("Routes.get: ", serviceMap);
     if (Array.isArray(configuration)) {
         configuration = configuration[0];
     }
