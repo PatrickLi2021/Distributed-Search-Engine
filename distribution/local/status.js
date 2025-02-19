@@ -1,4 +1,3 @@
-const id = require('../util/id');
 const log = require('../util/log');
 const { util } = require("@brown-ds/distribution");
 const { fork } = require('child_process');
@@ -6,8 +5,8 @@ const { fork } = require('child_process');
 const status = {};
 
 global.moreStatus = {
-  sid: id.getSID(global.nodeConfig),
-  nid: id.getNID(global.nodeConfig),
+  sid: global.distribution.util.id.getSID(global.nodeConfig),
+  nid: global.distribution.util.id.getNID(global.nodeConfig),
   counts: 0,
   toLocal: new Map(),
 };
