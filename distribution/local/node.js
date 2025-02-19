@@ -26,8 +26,9 @@ const start = function(callback) {
       // http://node_ip:node_port/service/method
       const parsedUrl = url.parse(req.url, true);
       const pathSegments = parsedUrl.pathname.split('/').filter(Boolean); 
-      const service = pathSegments[0];
-      const method = pathSegments[1];
+      const gid = pathSegments[0];
+      const service = pathSegments[1];
+      const method = pathSegments[2];
 
       /*
         A common pattern in handling HTTP requests in Node.js is to have a
@@ -49,9 +50,10 @@ const start = function(callback) {
             res.end('Invalid JSON format');
             return;
         }
-    
-        // Retrieve the service map and call the appropriate function
-        routes.get(service, (error, serviceMap) => {
+        
+        // LOCAL: Retrieve the service map and call the appropriate function
+        if (gid === "local") {
+          routes.get(service, (error, serviceMap) => {
             if (error) {
                 console.log(`Error: ${error.message}`);
                 res.statusCode = 404;
@@ -69,6 +71,8 @@ const start = function(callback) {
                       res.end(JSON.stringify(value));
                   }
               });
+          
+          // Handle RPC calls
           } else if (global.moreStatus.toLocal.has(method)) {
             let functionToCall = global.moreStatus.toLocal.get(method);
             jsonData = getFirstItem(jsonData);
@@ -87,6 +91,29 @@ const start = function(callback) {
               res.end('Service or method not found');
           }
         });
+        // Handle distributed service calls  
+      } else {
+        const config = {service: service, gid: gid};
+        routes.get(config, (e, v) => {
+          if (error) {
+            console.log(`Error: ${error.message}`);
+            res.statusCode = 404;
+            res.end('Service not found');
+            return;
+          }
+          else if (v) {
+            let functionToCall = v;
+            functionToCall(jsonData, (error, value) => {
+                if (error) {
+                    res.statusCode = 500;
+                    res.end(JSON.stringify({ error: error.message }));
+                } else {
+                    res.end(JSON.stringify(value));
+                }
+            });
+        }
+        });
+      }
     });
     } else {
       res.statusCode = 405;

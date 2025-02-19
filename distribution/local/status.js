@@ -1,5 +1,7 @@
 const id = require('../util/id');
 const log = require('../util/log');
+const { util } = require("@brown-ds/distribution");
+const { fork } = require('child_process');
 
 const status = {};
 
@@ -46,8 +48,40 @@ status.get = function(configuration, callback) {
 
 const distribution = require('@brown-ds/distribution')
 
-status.spawn = distribution.local.status.spawn;
+status.spawn = function (configuration, callback) {
+  // Create RPC from callback
+  const callbackRPC = createRPC(callback);
 
-status.stop = distribution.local.status.stop;
+  // Extend config to include RPC and serialize config
+  if ("onStart" in configuration) {
+    const originalOnStart = configuration.onStart;
+    configuration.onStart = function () {
+        originalOnStart();  
+        callbackRPC();
+    };
+  }
+  else {
+    configuration["onStart"] = callbackRPC;
+  }
+  const configStr = util.serialize(configuration);
+
+  // Fork and execute a new distribution.js process
+  let child = fork('../../distribution.js', [configStr], {});
+  return child;
+},
+
+status.stop = function (callback) {
+    setTimeout(() => {
+        if (global.distribution.node.server) {
+            global.distribution.node.server.close(() => {
+                console.log("Server has shut down.");
+                if (callback) callback();
+            });
+        } else {
+            console.log("No active server to stop.");
+            if (callback) callback();
+        }
+    }, 1000);
+};
 
 module.exports = status;

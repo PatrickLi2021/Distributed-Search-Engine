@@ -18,15 +18,13 @@ const http = require('node:http');
  * @return {void}
  */
 function send(message, remote, callback) {
-    console.log("in comm.send first");
     const data = distribution.util.serialize(message);
-    console.log("Send callback: ", callback.toString());
 
     // Create options
     const options = {
         hostname: remote.node.ip,        
         port: remote.node.port,          
-        path: `/${remote.service}/${remote.method}`,       
+        path: `/${remote.gid || 'local'}/${remote.service}/${remote.method}`,
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

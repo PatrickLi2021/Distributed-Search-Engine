@@ -1,5 +1,7 @@
 /** @typedef {import("../types").Callback} Callback */
 
+const distribution = require("@brown-ds/distribution");
+
 
 let serviceMap = new Map();
 serviceMap.set('status', {});
@@ -12,16 +14,25 @@ serviceMap.set('rpc', global.moreStatus.toLocal);
  * @param {Callback} callback
  * @return {void}
  */
-function get(configuration, callback) { // configuration is the same as the service name
-    console.log("Routes.get: ", serviceMap);
+function get(configuration, callback) { 
+    // Data parsing
     if (Array.isArray(configuration)) {
         configuration = configuration[0];
     }
-    if (serviceMap.has(configuration)) {
-        return callback(null, serviceMap.get(configuration));
+    const gid = configuration.gid || "local";
+    const service = configuration.service || configuration;
+
+    // Local service
+    if (serviceMap.has(service) && gid === "local") {
+        return callback(null, serviceMap.get(service));
+    
+    // Distributed service
+    } else if (gid != "local" && distribution[gid] && distribution[gid][service]) {
+        return callback(null, distribution[gid][service]);
     } else {
-        if (global.moreStatus.toLocal.has(configuration)) {
-            const localFuncPtr = global.moreStatus.toLocal.get(configuration);
+        // Handling RPC calls
+        if (global.moreStatus.toLocal.has(service)) {
+            const localFuncPtr = global.moreStatus.toLocal.get(service);
             return callback(null, localFuncPtr);
         }
         return callback(new Error("Service not in map"), null);
