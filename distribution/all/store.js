@@ -1,4 +1,3 @@
-
 const store = function(config) {
   const context = {};
   context.gid = config.gid || 'all';

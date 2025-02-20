@@ -10,6 +10,8 @@ function routes(config) {
    * @param {Callback} callback
    */
   function put(service, name, callback = () => { }) {
+    const remote = {service: 'routes', method: 'put'};
+    global.distribution[context.gid].comm.send([service, name], remote, callback);
   }
 
   /**
@@ -18,6 +20,8 @@ function routes(config) {
    * @param {Callback} callback
    */
   function rem(service, name, callback = () => { }) {
+    const remote = {service: 'groups', method: 'rem'};
+    global.distribution[context.gid].comm.send([service, name], remote, callback);
   }
 
   return {put, rem};

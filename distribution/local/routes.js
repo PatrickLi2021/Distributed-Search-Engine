@@ -1,42 +1,51 @@
 /** @typedef {import("../types").Callback} Callback */
 
-const distribution = require("@brown-ds/distribution");
+// const { status } = require("./local");
+const { comm, groups, status, routes, gossip, mem, store, mr } = require("../all/all");
+
+// const distribution = require("@brown-ds/distribution");
+// const distribution = global.distribution;
+// const distribution = require('../../config.js');
 
 
-let serviceMap = new Map();
+const serviceMap = new Map();
 serviceMap.set('status', {});
 serviceMap.set('routes', {});
 serviceMap.set('comm', {});
 serviceMap.set('rpc', global.moreStatus.toLocal);
+serviceMap.set('all', {'status': status, 'routes': routes, 'comm': comm, 'gossip': gossip, 'mem': mem, 'store': store, 'mr': mr, 'groups': groups});
+
 
 /**
  * @param {string} configuration
  * @param {Callback} callback
  * @return {void}
  */
-function get(configuration, callback) { 
-    // Data parsing
-    if (Array.isArray(configuration)) {
-        configuration = configuration[0];
-    }
-    const gid = configuration.gid || "local";
-    const service = configuration.service || configuration;
+function get(configuration, callback) {
+  // Data parsing
+  if (Array.isArray(configuration)) {
+    configuration = configuration[0];
+  }
+  const gid = configuration.gid || 'local';
+  const service = configuration.service || configuration;
 
-    // Local service
-    if (serviceMap.has(service) && gid === "local") {
-        return callback(null, serviceMap.get(service));
-    
+  // Local service
+  if (serviceMap.has(service) && gid === 'local') {
+    return callback(null, serviceMap.get(service));
     // Distributed service
-    } else if (gid != "local" && distribution[gid] && distribution[gid][service]) {
-        return callback(null, distribution[gid][service]);
-    } else {
-        // Handling RPC calls
-        if (global.moreStatus.toLocal.has(service)) {
-            const localFuncPtr = global.moreStatus.toLocal.get(service);
-            return callback(null, localFuncPtr);
-        }
-        return callback(new Error("Service not in map"), null);
+  } else if (gid != 'local') {
+    return callback(null, serviceMap.get('all')[service](configuration));
+  } else {
+    // Handling RPC calls
+    if (!(service in serviceMap)) {
+      const rpc = global.toLocal[service];
+      if (rpc) {
+        callback(null, {call: rpc});
+      } else {
+        callback(new Error(`Service ${service} not found!`));
+      }
     }
+  }
 }
 
 /**
@@ -46,11 +55,11 @@ function get(configuration, callback) {
  * @return {void}
  */
 function put(service, configuration, callback) {
-    serviceMap.set(configuration, service);
-    if (callback) {
-        callback(null, service);
-    }
-    return;
+  serviceMap.set(configuration, service);
+  if (callback) {
+    callback(null, service);
+  }
+  return;
 }
 
 /**
@@ -58,13 +67,13 @@ function put(service, configuration, callback) {
  * @param {Callback} callback
  */
 function rem(configuration, callback) {
-    if (serviceMap.has(configuration)) {
-        serviceMap.delete(configuration);
-        callback(null, configuration);
-    } else {
-        callback(new Error("Configuration not found in map"));
-    }
-    return;
+  if (serviceMap.has(configuration)) {
+    serviceMap.delete(configuration);
+    callback(null, configuration);
+  } else {
+    callback(new Error('Configuration not found in map'));
+  }
+  return;
 };
 
 module.exports = {get, put, rem};

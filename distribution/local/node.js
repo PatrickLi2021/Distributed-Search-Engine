@@ -2,8 +2,10 @@ const http = require('http');
 const url = require('url');
 const log = require('../util/log');
 const routes = require('../local/routes');
-const util = require('../util/util');
-const distribution = require('@brown-ds/distribution');
+const { deserialize } = require('../util/util');
+// const distribution = require('@brown-ds/distribution');
+// const distribution = global.distribution;
+// const distribution = require('../../config.js')
 
 /*
     The start function will be called to start your node. It will take a callback as an argument.
@@ -11,7 +13,7 @@ const distribution = require('@brown-ds/distribution');
 */
 function getFirstItem(data) {
   while (Array.isArray(data) && data.length > 0) {
-    data = data[0]
+    data = data[0];
   }
   return data;
 }
@@ -20,12 +22,11 @@ function getFirstItem(data) {
 const start = function(callback) {
   const server = http.createServer((req, res) => {
     // Listen only for PUT requests
-    if (req.method == "PUT") {
-      
+    if (req.method === 'PUT') {
       // The path determines the service to be used. The URL will have the form
       // http://node_ip:node_port/service/method
       const parsedUrl = url.parse(req.url, true);
-      const pathSegments = parsedUrl.pathname.split('/').filter(Boolean); 
+      const pathSegments = parsedUrl.pathname.split('/').filter(Boolean);
       const gid = pathSegments[0];
       const service = pathSegments[1];
       const method = pathSegments[2];
@@ -42,84 +43,29 @@ const start = function(callback) {
         body += chunk;
       });
       req.on('end', () => {
-        let jsonData = null;
-        try {
-            jsonData = distribution.util.deserialize(body);
-        } catch (error) {
-            res.statusCode = 400; 
-            res.end('Invalid JSON format');
-            return;
-        }
-        
-        // LOCAL: Retrieve the service map and call the appropriate function
-        if (gid === "local") {
-          routes.get(service, (error, serviceMap) => {
-            if (error) {
-                console.log(`Error: ${error.message}`);
-                res.statusCode = 404;
-                res.end('Service not found');
-                return;
-            }
-            if (serviceMap && serviceMap[method]) {
-              let functionToCall = serviceMap[method];
-          
-              functionToCall(jsonData, (error, value) => {
-                  if (error) {
-                      res.statusCode = 500;
-                      res.end(JSON.stringify({ error: error.message }));
-                  } else {
-                      res.end(JSON.stringify(value));
-                  }
-              });
-          
-          // Handle RPC calls
-          } else if (global.moreStatus.toLocal.has(method)) {
-            let functionToCall = global.moreStatus.toLocal.get(method);
-            jsonData = getFirstItem(jsonData);
-          
-            functionToCall(jsonData, (error, value) => {
-                if (error) {
-                    res.statusCode = 500;
-                    res.end(JSON.stringify({ error: error.message }));
-                } else {
-                    res.end(JSON.stringify(value));
-                }
-            });
-          } else {
-              console.log(`No function found for service: ${service}, method: ${method}`);
-              res.statusCode = 404;
-              res.end('Service or method not found');
-          }
-        });
-        // Handle distributed service calls  
-      } else {
-        const config = {service: service, gid: gid};
-        routes.get(config, (e, v) => {
+        let jsonData = deserialize(body);
+
+        let config = {gid: gid, service: service};
+        routes.get(config, (error, serviceMap) => {
           if (error) {
-            console.log(`Error: ${error.message}`);
             res.statusCode = 404;
-            res.end('Service not found');
+            res.end(serialize([new Error('Service not found'), null]));
             return;
           }
-          else if (v) {
-            let functionToCall = v;
-            functionToCall(jsonData, (error, value) => {
-                if (error) {
-                    res.statusCode = 500;
-                    res.end(JSON.stringify({ error: error.message }));
-                } else {
-                    res.end(JSON.stringify(value));
-                }
+          if (serviceMap && method in serviceMap) {
+            const functionToCall = serviceMap[method];
+            functionToCall(...jsonData, (error, value) => {
+              res.end(serialize([error, value]));
             });
-        }
+
+          } else {
+            res.statusCode = 404;
+            res.end(serialize([new Error('Service or method not found'), null]));
+          }
         });
-      }
-    });
-    } else {
-      res.statusCode = 405;
-      res.setHeader('Allow', 'PUT');
-      res.end('Only PUT requests are allowed');
-    }
+        
+      });
+    } 
   });
 
   /*

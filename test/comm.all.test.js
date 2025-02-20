@@ -120,7 +120,6 @@ beforeAll((done) => {
     // Now, start the nodes listening node
     distribution.node.start((server) => {
       localServer = server;
-
       // Start the nodes
       distribution.local.status.spawn(n1, (e, v) => {
         distribution.local.status.spawn(n2, (e, v) => {
@@ -135,7 +134,7 @@ beforeAll((done) => {
           });
         });
       });
-    }); ;
+    }); 
   };
 });
 
