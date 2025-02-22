@@ -137,7 +137,7 @@ In order to streamline the function lookup process on the remote node, I made us
 ### Correctness & Performance Characterization
 
 #### Correctness
-To characterize the correctness of my implementation, I ran my implementation of the different components to check if my code included basic functionality. From there, I wrote 12 additional unit tests testing various edge cases and more in-depth general functionality. For example, I test for various node properties in `status`, removal of methods using `rem`, combinations of methods using in tandem (i.e. `rem`, `get`), nonexistent services, etc.
+To characterize the correctness of my implementation, I ran my implementation of the different components to check if my code included basic functionality. From there, I wrote 12 additional unit tests testing various edge cases and more in-depth general functionality. For example, I test for various node properties in `status`, removal of methods using `rem`, combinations of methods using in tandem (i.e. `rem`, `get`), nonexistent services, etc. These tests take a total of 3.234 seconds to execute.
 
 #### Performance
 I characterized the performance of comm and RPC by sending 1000 service requests in a tight loop and used the `performance.now()` package in Node.js to do this. Average throughput and latency is recorded in `package.json`.
