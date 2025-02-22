@@ -2,11 +2,13 @@ const distribution = require('../config.js');
 const id = distribution.util.id;
 
 test('(10 pts) all.status.spawn/stop()', (done) => {
+  console.log("inside test");
   // Spawn a node
   const nodeToSpawn = {ip: '127.0.0.1', port: 8008};
 
   // Spawn the node
   distribution.group4.status.spawn(nodeToSpawn, (e, v) => {
+    console.log("inside spawn callback")
     try {
       expect(e).toBeFalsy();
       expect(v.ip).toEqual(nodeToSpawn.ip);
@@ -17,14 +19,15 @@ test('(10 pts) all.status.spawn/stop()', (done) => {
     let remote = {node: nodeToSpawn, service: 'status', method: 'get'};
 
     // Ping the node, it should respond
+    console.log("REACHED THE PING");
     distribution.local.comm.send(['nid'], remote, (e, v) => {
       try {
         expect(e).toBeFalsy();
         expect(v).toBe(id.getNID(nodeToSpawn));
       } catch (error) {
         done(error);
-      }
-
+      } 
+      console.log("REACHED THE LOCAL GROUPS GET");
       distribution.local.groups.get('group4', (e, v) => {
         try {
           expect(e).toBeFalsy();
@@ -32,10 +35,10 @@ test('(10 pts) all.status.spawn/stop()', (done) => {
         } catch (error) {
           done(error);
         }
-
         remote = {node: nodeToSpawn, service: 'status', method: 'stop'};
 
         // Stop the node
+        console.log("REACHED THE STOP OF THE NODE");
         distribution.local.comm.send([], remote, (e, v) => {
           try {
             expect(e).toBeFalsy();
@@ -47,9 +50,13 @@ test('(10 pts) all.status.spawn/stop()', (done) => {
           remote = {node: nodeToSpawn, service: 'status', method: 'get'};
 
           // Ping the node again, it shouldn't respond
+          console.log("PING NODE AGAIN");
           distribution.local.comm.send(['nid'],
               remote, (e, v) => {
                 try {
+                  console.log("IN LAST");
+                  console.log("e: ", e);
+                  console.log("v: ", v);
                   expect(e).toBeDefined();
                   expect(e).toBeInstanceOf(Error);
                   expect(v).toBeFalsy();

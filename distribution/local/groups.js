@@ -2,8 +2,6 @@ const {id} = require('../util/util');
 
 const groups = {}; // map from node group names to sets of nodes. Each set is a map from SID to node objects
 
-// const distribution = require('../../config.js')
-
 /*
 * This function can be used to get the IP and port info of all nodes in a particular group.
 */
@@ -50,11 +48,11 @@ groups.del = function(name, callback) {
 
 groups.add = function(name, node, callback) {
   if (!(name in groups)) {
-    return callback(null, name);
+    return callback(null, node);
   }
   groups[name][id.getSID(node)] = node;
   if (typeof callback === 'function') {
-    callback(null, groups[name]);
+    callback(null, node);
   }
   return;
 };

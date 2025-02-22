@@ -1,6 +1,3 @@
-// const distribution = require("@brown-ds/distribution");
-// const distribution = global.distribution;
-
 const groups = function(config) {
   const context = {};
   context.gid = config.gid || 'all';

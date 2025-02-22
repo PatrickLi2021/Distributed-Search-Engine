@@ -148,5 +148,39 @@ I characterized the performance of comm and RPC by sending 1000 service requests
 
 To begin, I would say that in most cases in computing, function calls (AKA a particular task) are executed __locally__, in that the execution of that task takes place on the computer itself. However, sometimes a computer (or node) would like to execute a function that is only available on a remote machine (a machine that is not our own). In order to do this, the remote node/machine sends our node something called an RPC stub, which is essentially an instruction for how to execute that function on the other machine. Once we call the function produced by this stub, it will send a request to that remote node, execute the function there, and the result will be returned back to us.
 
+## M3: Node Groups and Gossip Protocols
+
+### Summary of Implementation and Key Challenges
+
+This milestone focuses on implementing fully dynamic groups of nodes in a distributed system, allowing nodes to be added or removed dynamically. At a high level, node groups serve 3 key purposes: (1) making multiple nodes function as a single system, (2) enabling customized services per group, and (3) supporting scalability. At large scales, gossip protocols are used for information dissemination by limiting communication to a subset of nodes on each iteration.
+
+A core challenge in dynamic node groups is tracking node status and ensuring communication across the group. To facilitate this, the onStart property in a node's configuration allows executing a function when a node completes booting, enabling better initialization and coordination. Nodes and groups are referenced using NIDs (Node IDs) and GIDs (Group IDs), with built-in groups like all (all nodes) and local (current node). Services such as `status`, `groups`, `gossip`, `comm`, and `routes` help manage node interactions. Another key challenge was translating the local implementations of various functions like `comm` and `status` to their distributed versions.
+
+To support distributed execution, `local.comm.send()` and `local.routes.get()` are extended to include group identifiers (GIDs), enabling remote procedure calls (RPCs) within groups. Additionally, the status service is enhanced with spawn and stop methods to dynamically launch and terminate nodes. Distributed services apply operations across multiple nodes, requiring mechanisms to aggregate results from all nodes in a group.
+
+#### Lab Portion
+The spawn function is responsible for launching a new node with a given configuration while ensuring that an RPC callback is executed when the node successfully starts. To achieve this, it first creates an RPC stub using `createRPC(toAsync(callback))`, serializes it, and injects it into the new node's configuration. Additionally, if an onStart function is provided in the configuration, it is extracted, sanitized to remove control characters, and modified to include the serialized RPC logic. The modified configuration is then passed to a new child process using Node.js’s spawn function, launching `distribution.js` with the appropriate command-line arguments. The newly created node will execute the provided onStart function and integrate with the distributed system upon booting.
+
+The stop function is designed to gracefully shut down the node. It first calls the provided callback with the current node's configuration to signal the shutdown process. It then closes the HTTP server associated with the node using `global.distribution.node.server.close()`. To ensure that all pending operations are completed before termination, it schedules a delayed `exit(0)` call using `setTimeout`, allowing the node to exit cleanly without abruptly terminating ongoing processes. This ensures the node stops in an orderly manner, preventing potential inconsistencies in the distributed system.
+
+### Correctness & Performance Characterization
+
+#### Correctness
+I characterized correctness of this implementation by writing 5 unit tests in the  `m3.student.test.js` file to test both the newly added `groups` service as well as various distributed services. These tests verify various aspects of a distributed system, particularly node grouping, status retrieval, and service routing. The first test ensures that a node can successfully join a group and retrieve status information from other nodes in the group. Other tests validate edge cases and error handling when looking an unknown key, the correct execution of a distributed service, and the retrieval of specific status values like counts and heapTotal. 
+
+#### Performance
+The throughput of spawn being launched programmatically 8.423 nodes / sec. The latency of launching nodes through spawn programmatically is 95.0583 ms/node launched. The tests that were used to calculate these metrics are located in `m3.latencyPlusThroughput.test.js`.
+
+The throughput of spawn through the terminal is around 125.643 nodes launched per second.
+The latency of spawn through the terminal is around 143.422 ms/node launched.
+
+### Characterizing Convergence of the Gossip Protocol
+I found a 0.0754 ms difference between using `logn` vs `n` for the gossip protocol. This parameter is used to determine the number of peer nodes every active node sends to on each iteration of the protocol. The 0.0754 millisecond difference between using `log n` versus `n` as the number of peer nodes in the gossip protocol suggests that sending messages to all nodes was slightly faster in this case, likely due to the relatively small size of the network used in the `gossip.all.extra.test.js` file. However, in a larger network, the performance gap would likely widen, with `log n` leading to faster convergence as fewer nodes would need to be contacted, reducing the overall message overhead. As network size scales up, `log n` would become increasingly advantageous for efficient communication.
+
+### Key Feature
+
+> What is the point of having a gossip protocol? Why doesn't a node just send the message to _all_ other nodes in its group?
+
+We use a gossip protocol instead of direct broadcasting to all nodes because it is more scalable and efficient in a distributed system. Broadcasting to all nodes at once can lead to network congestion and this is exacerbated when the system grows. If we use gossip, this can spread information gradually by having each node randomly relay the message to a few peers, which then do the same.
 
 > ...

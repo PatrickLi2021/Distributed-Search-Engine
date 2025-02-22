@@ -26,6 +26,7 @@ test('(10 pts) local.status.spawn/stop using local.comm', (done) => {
   };
 
   const cleanup = (server, done) => {
+    console.log("IN CLEANUP");
     comm.send([], {service: 'status', method: 'stop', node: node}, (e, v) => {
       server.close();
       try {
@@ -42,6 +43,9 @@ test('(10 pts) local.status.spawn/stop using local.comm', (done) => {
   const spawnNode = (server) => {
     local.status.spawn(config, (e, v) => {
       try {
+        console.log("IN SPAWN NODE");
+        console.log("v: ", v);
+        console.log("e: ", e);
         expect(e).toBeFalsy();
         expect(v).toBeDefined();
         cleanup(server, done);
@@ -50,8 +54,9 @@ test('(10 pts) local.status.spawn/stop using local.comm', (done) => {
       }
     });
   };
-
+  console.log("right here");
   distribution.node.start((server) => {
+    console.log("About to call spawn node");
     spawnNode(server);
   });
 });

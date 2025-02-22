@@ -3,9 +3,6 @@ const url = require('url');
 const log = require('../util/log');
 const routes = require('../local/routes');
 const { deserialize } = require('../util/util');
-// const distribution = require('@brown-ds/distribution');
-// const distribution = global.distribution;
-// const distribution = require('../../config.js')
 
 /*
     The start function will be called to start your node. It will take a callback as an argument.

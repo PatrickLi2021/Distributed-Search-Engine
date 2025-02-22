@@ -1,7 +1,5 @@
 /** @typedef {import("../types").Callback} Callback */
 /** @typedef {import("../types").Node} Node */
-// const distribution = require("@brown-ds/distribution");
-// const distribution = global.distribution;
 const http = require('node:http');
 const {serialize} = require('../util/serialization');
 
@@ -21,7 +19,6 @@ const {serialize} = require('../util/serialization');
  */
 function send(message=[], remote, callback) {
   const data = serialize(message);
-
   // Create options
   const options = {
     hostname: remote.node.ip,
@@ -52,7 +49,7 @@ function send(message=[], remote, callback) {
 
   // Handle request errors
   req.on('error', (err) => {
-    callback(err, null);
+    callback(new Error("comm err", {source:err}), null);
   });
 
   // Send the request with data

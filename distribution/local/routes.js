@@ -1,11 +1,6 @@
 /** @typedef {import("../types").Callback} Callback */
 
-// const { status } = require("./local");
 const { comm, groups, status, routes, gossip, mem, store, mr } = require("../all/all");
-
-// const distribution = require("@brown-ds/distribution");
-// const distribution = global.distribution;
-// const distribution = require('../../config.js');
 
 
 const serviceMap = new Map();

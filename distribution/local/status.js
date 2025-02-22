@@ -1,6 +1,9 @@
 // const log = require('../util/log');
-// const { util } = require("@brown-ds/distribution");
-// const { fork } = require('child_process');
+const { createRPC, toAsync } = require("../util/wire");
+const path = require('path');
+const { spawn } = require('node:child_process');
+const { serialize } = require('../util/serialization')
+const { exit } = require('node:process');
 
 const status = {};
 
@@ -9,6 +12,8 @@ global.moreStatus = {
   nid: global.distribution.util.id.getNID(global.nodeConfig),
   counts: 0,
   toLocal: new Map(),
+  receivedMessages: new Set(),
+  
 };
 
 status.get = function(configuration, callback) {
@@ -45,46 +50,45 @@ status.get = function(configuration, callback) {
   callback(new Error('Status key not found'), null);
 };
 
-status.spawn = require('@brown-ds/distribution/distribution/local/status').spawn;
+// status.spawn = require('@brown-ds/distribution/distribution/local/status').spawn;
 
 // MY IMPLEMENTATION OF SPAWN
-// function (configuration, callback) {
-//   // Create RPC from callback
-//   const callbackRPC = createRPC(callback);
+status.spawn = function(configuration={}, callback) {
+  
+  // Create RPC stub to put into function
+  const RPCstub = createRPC(toAsync(callback));
+  const serializedRPC = serialize(RPCstub);
 
-//   // Extend config to include RPC and serialize config
-//   if ("onStart" in configuration) {
-//     const originalOnStart = configuration.onStart;
-//     configuration.onStart = function () {
-//         originalOnStart();
-//         callbackRPC();
-//     };
-//   }
-//   else {
-//     configuration["onStart"] = callbackRPC;
-//   }
-//   const configStr = util.serialize(configuration);
+  // Extract original onStart from config
+  const onStart = configuration.onStart || (() => {});
+  let onStartFunc = "let onStart = " + onStart.toString() + ";onStart();\n";
+  onStartFunc = onStartFunc.replace(/[\x00-\x1F\x7F\x80-\x9F]/g, ''); // remove command chars
 
-//   // Fork and execute a new distribution.js process
-//   let child = fork('../../distribution.js', [configStr], {});
-//   return child;
-// },
+  const sendIndex = serializedRPC.indexOf('distribution.local.comm');
+  let newSerializedRPC = serializedRPC.substring(0, sendIndex) + onStartFunc + serializedRPC.substring(sendIndex);
 
-status.stop = require('@brown-ds/distribution/distribution/local/status').stop;
+  let nargs = "[null, {ip: __IP__, port: __PORT__}];";
+  nargs = nargs.replace("__IP__", "\\\"" + configuration.ip + "\\\"").replace("__PORT__", configuration.port);
 
-// MY IMPLEMENTATION OF STOP
-// function (callback) {
-//     setTimeout(() => {
-//         if (global.distribution.node.server) {
-//             global.distribution.node.server.close(() => {
-//                 console.log("Server has shut down.");
-//                 if (callback) callback();
-//             });
-//         } else {
-//             console.log("No active server to stop.");
-//             if (callback) callback();
-//         }
-//     }, 1000);
-// };
+  empty_callback = (e, v) => {};
+  let serializedCback = serialize(empty_callback);
+  serializedCback = serializedCback.replace("{\"type\":\"function\",\"value\":", "").substring(1, serializedCback.length-2);
+
+  newSerializedRPC = newSerializedRPC.replace("args.pop()", "()=>{}").replace("let message = args;", "let message = " + nargs);
+
+  const stub = deserialize(newSerializedRPC);
+  configuration['onStart'] = stub;
+
+  let options = {'cwd': path.join(__dirname, '../..'), 'detached': true, 'stdio': 'inherit'};
+  spawn('node', ['distribution.js', '--config='+serialize(configuration)], options);
+};
+
+// status.stop = require('@brown-ds/distribution/distribution/local/status').stop;
+
+status.stop = function (callback) {
+  callback(null, global.nodeConfig);
+  global.distribution.node.server.close();
+  setTimeout(() => { exit(0)}, 0.5);
+};
 
 module.exports = status;

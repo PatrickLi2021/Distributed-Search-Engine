@@ -96,5 +96,24 @@
             ]
         },
         "dloc": -99
+    },
+    "reportM3": {
+        "hours": 20,
+        "loc": 314,
+        "dev": {
+            "cpu-no": 10,
+            "mem-gb": 8.02,
+            "ssd-gb": 59
+        },
+        "throughput": {
+            "dev": [
+                "Launching Nodes: 8.3243 nodes/second"
+            ]
+        },
+        "latency": {
+            "dev": [
+                "Launching Nodes:  95.0853 ms/node launched"
+            ]
+        }
     }
 }
