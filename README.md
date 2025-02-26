@@ -183,4 +183,36 @@ I found a 0.0754 ms difference between using `logn` vs `n` for the gossip protoc
 
 We use a gossip protocol instead of direct broadcasting to all nodes because it is more scalable and efficient in a distributed system. Broadcasting to all nodes at once can lead to network congestion and this is exacerbated when the system grows. If we use gossip, this can spread information gradually by having each node randomly relay the message to a few peers, which then do the same.
 
+## M4: Distributed Storage
+
+### Summary of Implementation
+This milestone focused on implementing a distributed storage system, which at its core is a distributed key-value store centered around consistent hashing and rendezvous hashing to store, retrieve, update, and delete objects. These techniques allow the system to offer optimal reconfiguration overhead when a node is removed from a group or a new node is added to a group. Given an object and a set of nodes in a particular group, the system will be able to pick a node responsible for storing that object.
+
+#### Local `mem` and `store` Services
+These services provide node-local storage for objects using a key-value interface, with `mem` offering ephemeral, in-memory storage and `store` providing persistent storage on disk. Both of these services provide 3 primary operations within their API: `get`, `put`, and `del`, allowing users to insert, retrieve, and delete objects based on a primary key. If a key is not explicitly provided when inserting an object, the system generates one using the SHA-256 hash of the serialized object. These services also guarantee idempotency for `get` and `put`, meaning repeated calls with the same arguments produce the same effect as a single call. 
+
+For `local.store`, the `put` function serializes an object and writes it to a file located in a directory derived from the node configuration. It ensures the directory exists before attempting to write the file, and handles any errors that occur during the file creation process. The `get` function retrieves an object by reading its corresponding file, deserializing the contents, and returning the object via a callback. Similarly, the `del` function deletes the file associated with a specific key and returns the object before deletion. 
+
+For `local.mem`, it operates similarly to `store`. The `put` method stores an object in the localStore map. If no configuration key is provided, the method generates a unique key for the object using `id.getID(state)` and stores the object with this generated key. If a configuration key is provided, the object is associated with that key. After storing the object, the original object is passed to the callback. `get` retrieves an object from the `localStore` map using the provided configuration key. If the key exists in the map, the corresponding object is returned via the callback. If the key is not found, an error is passed to the callback. Lastly, `del` deletes an object from the `localStore` map. If the object exists in the map, it is removed and returned through the callback. If the key is not found, an error is passed to the callback.
+
+### Key Challenges
+The key challenges during this implementation were encountered during the implementation of the distributed versions of `mem` and `store`. I had difficulty understanding how to incorporate the additional group-related metadata into those services and being able to distinguish internally between identical keys. I also think that figuring out how to configure the local versions of these services to be able to interoperate with the distributed versions was challenging.
+
+#### Lab Portion
+For the lab portion, I had to
+
+### Correctness & Performance Characterization
+
+#### Correctness
+
+
+#### Performance
+
+### Key Feature
+> Why is the `reconf` method designed to first identify all the keys to be relocated and then relocate individual objects instead of fetching all the objects immediately and then pushing them to their corresponding locations?
+
+
+
+
+
 > ...

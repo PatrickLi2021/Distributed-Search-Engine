@@ -16,6 +16,10 @@ groups.get = function(name, callback) {
 
 groups.put = function(config, group, callback) {
   // Put mapping of group name to node set in map
+  let hash = null;
+  if (typeof(config) === 'object' && 'hash' in config) {
+    hash = config['hash'];
+  }
   if (typeof(config) === 'object' && 'gid' in config) {
     config = config['gid'];
   }
@@ -28,7 +32,8 @@ groups.put = function(config, group, callback) {
   global.distribution[config].groups = require('../all/groups')({gid: config});
   global.distribution[config].routes = require('../all/routes')({gid: config});
   global.distribution[config].mem = require('../all/mem')({gid: config});
-  global.distribution[config].store = require('../all/store')({gid: config});
+  global.distribution[config].store = require('../all/store')({gid: config, hash: hash});
+
   if (typeof callback === 'function') {
     callback(null, groups[config]);
   }

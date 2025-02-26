@@ -55,10 +55,40 @@ function naiveHash(kid, nids) {
 }
 
 function consistentHash(kid, nids) {
+  // Convert NIDs to numerical representation and insert them into a new list
+  const nidList = nids.map(nid => ({ nid, num: idToNum(nid) }));
+  const kidNum = idToNum(kid);
+  nidList.push({nid: kid, num: kidNum});
+  const sortedList = nidList.slice().sort((a, b) => a.num - b.num);
+
+  // Pick the NID right after the one corresponding to the KID
+  for (let i = 0; i < sortedList.length; i++) {
+    if (sortedList[sortedList.length - 1] == {nid: kid, num: idToNum(kid)}) {
+      return sortedList[0].nid;
+    } else if (sortedList[i].num > kidNum) {
+      return sortedList[i].nid;
+    }
+  }
+  return sortedList[0].nid;
 }
 
+/*
+* Need to map {nid, num} (where num is created by hashing the kid + nid and then converting the result into a
+* numerical representation) because we need to link num to nid. We care about the resulting nid at the end
+*/
 
 function rendezvousHash(kid, nids) {
+  // Create new list by concatenating each NID with the KID
+  const scoredNids = nids.map(nid => {
+    const combined = kid + nid;
+    const hashedVal = getID(combined);
+    const num = idToNum(hashedVal);
+    return { nid, num }; // Store both for correct retrieval
+  });
+  const maxEntry = scoredNids.reduce((max, entry) =>
+    entry.num > max.num ? entry : max
+  );
+  return maxEntry.nid;
 }
 
 module.exports = {

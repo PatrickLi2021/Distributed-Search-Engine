@@ -15,7 +15,7 @@ const gossip = function(config) {
       // Put nodes in a list and form a new group
       global.distribution.local.groups.get(context.gid, (e, v) => {
         if (e) {
-          callback(new Error("Could get nodes"), null);
+          callback(new Error("Could not get nodes"), null);
           return;
         }
         const nodeArray = Object.values(v);

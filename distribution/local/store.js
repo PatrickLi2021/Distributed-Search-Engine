@@ -1,7 +1,6 @@
 const fs = require('fs');
 const {serialize, deserialize } = require('../util/serialization');
 const path = require('path');
-const mkdirp = require('mkdirp');
 const { id } = require('../util/util');
 
 /* Notes/Tips:
@@ -10,11 +9,6 @@ const { id } = require('../util/util');
   Use the `path` module for that.
 */
 
-
-function toAlphanumeric(str) {
-  return str.replace(/[^a-zA-Z0-9]/g, '');
-}
-
 /*
 * Parameters:
 * - state: The JS object that we want to put inside our store
@@ -22,21 +16,22 @@ function toAlphanumeric(str) {
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
 function put(state, configuration, callback) {
-  if (configuration == null) {
-    configuration = id.getID(state);
+  let filename = "";
+  let group = "";
+  let directory = id.getNID(global.nodeConfig);
+  if (typeof configuration === "string") {
+    filename = configuration;
+    node = id.getNID(global.nodeConfig);
   }
-
-  configuration = toAlphanumeric(configuration);
-
-  // If object is not already a string, serialize it
-  const originalObj = state;
-  if (typeof state !== 'string') {
-    state = serialize(state);
+  else if (configuration == null || configuration.key == null) {
+    const hashKey = id.getID(state);
+    configuration = hashKey;
+    filename = id.getID(state);
   }
-
-  const directory = id.getNID(global.nodeConfig);
-  const filename = configuration;
-  
+  else if (typeof configuration === "object") {
+    group = configuration.gid;
+    filename = configuration.key;
+  }
   const dirPath = path.join(process.cwd(), directory);
 
   // Ensure the directory exists before writing the file
@@ -51,12 +46,12 @@ function put(state, configuration, callback) {
   const filePath = path.join(dirPath, `${filename}.json`);
 
   // Write the serialized object to the file
-  fs.writeFile(filePath, state, 'utf8', (err) => {
+  fs.writeFile(filePath, serialize(state), 'utf8', (err) => {
     if (err) {
       callback(new Error(`Error writing object to file: ${err.message}`), null);
       return;
     }
-    callback(null, originalObj);
+    callback(null, state);
   });
 }
 
@@ -66,11 +61,14 @@ function put(state, configuration, callback) {
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
 function get(configuration, callback) {
-  configuration = toAlphanumeric(configuration);
-
   // Get the directory based on NID
   const directory = id.getNID(global.nodeConfig);
   const dirPath = path.join(process.cwd(), directory); // NID-based directory
+  
+  if (typeof configuration === 'object') {
+    configuration = configuration.key;
+  }
+  
   const filePath = path.join(dirPath, `${configuration}.json`);
 
   // Read the file to retrieve the object
@@ -97,8 +95,6 @@ function get(configuration, callback) {
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
 function del(configuration, callback) {
-  configuration = toAlphanumeric(configuration);
-
   // Get the directory name based on NID
   const directory = id.getNID(global.nodeConfig);
   const dirPath = path.join(process.cwd(), directory); // NID-based directory
