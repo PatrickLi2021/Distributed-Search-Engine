@@ -144,6 +144,9 @@ test('(10 pts) all.mem.reconf', (done) => {
 
   // Now we actually put items in the group,
   // remove n5, and check if the items are placed correctly
+
+  // For reference, users[0] could be {first: 'Emma', last: 'Watson'} and keys[0] could be 
+  // [{key: keys[0], gid: 'mygroup'}]
   distribution.mygroup.mem.put(users[0], keys[0], (e, v) => {
     distribution.mygroup.mem.put(users[1], keys[1], (e, v) => {
       distribution.mygroup.mem.put(users[2], keys[2], (e, v) => {
