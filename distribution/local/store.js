@@ -2,6 +2,7 @@ const fs = require('fs');
 const {serialize, deserialize } = require('../util/serialization');
 const path = require('path');
 const { id } = require('../util/util');
+const glob = require("glob");
 
 /* Notes/Tips:
 
@@ -9,30 +10,46 @@ const { id } = require('../util/util');
   Use the `path` module for that.
 */
 
+var getDirectories = function (dirPath, callback) {
+  glob(dirPath + '/**/*', callback);
+};
+
+
 /*
 * Parameters:
 * - state: The JS object that we want to put inside our store
 * - configuration: The string key we want to be associated with this object
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
-function put(state, configuration, callback) {
+function put(state, configuration, callback) {  
   let filename = "";
   let group = "";
   let directory = id.getNID(global.nodeConfig);
+  
+  // Case when local.put is called directly (no proagation from distributed service)
   if (typeof configuration === "string") {
     filename = configuration;
     node = id.getNID(global.nodeConfig);
   }
-  else if (configuration == null || configuration.key == null) {
+  // Other case when local.put is called directly (no proagation from distributed service)
+  else if (configuration == null) {
     const hashKey = id.getID(state);
     configuration = hashKey;
     filename = id.getID(state);
   }
+  // Distributed Case:
+  else if (configuration.key == null) {
+    group = configuration.gid;
+    const hashKey = id.getID(state);
+    configuration = hashKey;
+    filename = id.getID(state);
+  }
+  // Distributed Case
   else if (typeof configuration === "object") {
     group = configuration.gid;
     filename = configuration.key;
   }
-  const dirPath = path.join(process.cwd(), directory);
+  const dirPath = path.join(process.cwd(), group + '/' + directory);
 
   // Ensure the directory exists before writing the file
   try {
@@ -61,14 +78,32 @@ function put(state, configuration, callback) {
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
 function get(configuration, callback) {
-  // Get the directory based on NID
-  const directory = id.getNID(global.nodeConfig);
-  const dirPath = path.join(process.cwd(), directory); // NID-based directory
-  
+  let group = "";
   if (typeof configuration === 'object') {
+    group = configuration.gid;
     configuration = configuration.key;
   }
-  
+
+    // Get the directory based on NID
+    const directory = id.getNID(global.nodeConfig);
+    let dirPath = path.join(process.cwd(), group + '/' + directory);
+
+  // Handle null case
+  if (configuration === null) {
+    dirPath = path.join(process.cwd(), group + '/');
+    getDirectories(dirPath, function (err, res) {
+      if (err) {
+        callback({}, err);
+        return;
+      } else {
+        res = res.filter(filePath => path.extname(filePath) === '.json').map(filePath => path.basename(filePath, '.json')); 
+        callback({}, res);
+        return;
+      }
+    });
+    return;
+  }
+    
   const filePath = path.join(dirPath, `${configuration}.json`);
 
   // Read the file to retrieve the object
@@ -82,10 +117,10 @@ function get(configuration, callback) {
         return;
       }
     }
-
     // Deserialize the object
     const deserializedObj = deserialize(data);
     callback(null, deserializedObj);
+    return;
   });
 }
 
@@ -95,9 +130,15 @@ function get(configuration, callback) {
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
 function del(configuration, callback) {
+  let group = "";
+  if (typeof configuration === 'object') {
+    group = configuration.gid;
+    configuration = configuration.key;
+  }
+  
   // Get the directory name based on NID
   const directory = id.getNID(global.nodeConfig);
-  const dirPath = path.join(process.cwd(), directory); // NID-based directory
+  const dirPath = path.join(process.cwd(), group + "/" + directory); // NID-based directory
   const filePath = path.join(dirPath, `${configuration}.json`);
 
   // Read the file to retrieve the stored object before deletion

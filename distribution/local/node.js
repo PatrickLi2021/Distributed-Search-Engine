@@ -27,9 +27,6 @@ const start = function(callback) {
       const gid = pathSegments[0];
       const service = pathSegments[1];
       const method = pathSegments[2];
-      if (gid == 'group1') {
-        console.log("Parsed URL: ", parsedUrl);
-      }
       /*
         A common pattern in handling HTTP requests in Node.js is to have a
         subroutine that collects all the data chunks belonging to the same

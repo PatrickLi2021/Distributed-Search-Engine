@@ -26,12 +26,25 @@ function store(config) {
 
         // Retrieve value by issuing a local.comm.send request
         const remote = {node: nodeWithVal, service: 'store', method: 'get'};
+
+        // Normalize configuration
+        configuration = {key: configuration, gid: context.gid};
+
         global.distribution.local.comm.send([configuration], remote, (e, v) => {
-          if (e) {
+          
+          if (e instanceof Error ) {
             callback(new Error("Could not get object"), null);
             return;
           }
-          callback(null, v);
+          else {
+            if (configuration.key == null) {
+              callback({}, v);
+              return;
+            } else {
+              callback(null, v);
+              return;
+            }
+          }
         });
       });
     },
@@ -87,6 +100,9 @@ function store(config) {
         // Run the hashing algorithm on the KID and the NIDs
         const nodeID = context.hash(kid, nids);
         const nodeWithVal = Object.values(v).find(node => id.getNID(node) === nodeID);
+
+        // Normalize configuration
+        configuration = {key: configuration, gid: context.gid};
 
         // Delete object by issuing a local.comm.send request
         const remote = {node: nodeWithVal, service: 'store', method: 'del'};

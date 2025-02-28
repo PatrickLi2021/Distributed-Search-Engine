@@ -41,7 +41,7 @@ function send(message=[], remote, callback) {
 
     // Handle end of response
     res.on('end', () => {
-        let parsed = deserialize(responseData)
+        let parsed = deserialize(responseData);
         callback(...parsed);
     }
     );
