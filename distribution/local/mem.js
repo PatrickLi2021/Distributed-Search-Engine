@@ -3,7 +3,7 @@ const localStore = new Map();
 const { local } = require('@brown-ds/distribution');
 const id = require('../util/id');
 const log = require('../util/log');
-const { serialize } = require('../util/serialization');
+const { serialize, deserialize } = require('../util/serialization');
 
 /*
 * Parameters:
@@ -33,11 +33,16 @@ function put(state, configuration, callback) {
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
 function get(configuration, callback) {
+    // Handle null case
+    if (configuration === null || configuration.key === null) {
+        let keysArray = Array.from(localStore.keys()).map(deserialize).map(obj => obj.key);
+        callback(null, keysArray);
+        return;
+    }
     if (typeof configuration !== "string") {
         configuration = serialize(configuration);
     } 
     configuration = serialize({gid: "local", key: configuration});
-
     if (!localStore.has(configuration)) {
         callback(new Error("Local store did not have object associated with key"), null);
         return;

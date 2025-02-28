@@ -79,8 +79,8 @@ function put(state, configuration, callback) {
 */
 function get(configuration, callback) {
   let group = "";
-  if (typeof configuration === 'object') {
-    group = configuration.gid;
+  if (configuration && typeof configuration === 'object') {
+    group = configuration.gid || 'local';
     configuration = configuration.key;
   }
 
@@ -93,11 +93,11 @@ function get(configuration, callback) {
     dirPath = path.join(process.cwd(), group + '/');
     getDirectories(dirPath, function (err, res) {
       if (err) {
-        callback({}, err);
+        callback(null, err);
         return;
       } else {
         res = res.filter(filePath => path.extname(filePath) === '.json').map(filePath => path.basename(filePath, '.json')); 
-        callback({}, res);
+        callback(null, res);
         return;
       }
     });

@@ -1,3 +1,4 @@
+const { serialize } = require("../util/serialization");
 const { id } = require("../util/util");
 
 function mem(config) {
@@ -35,17 +36,41 @@ function mem(config) {
         // Normalize configuration
         configuration = {gid: context.gid, key: configuration};
 
-        // Retrieve value by issuing a local.comm.send request
-        const remote = {node: nodeWithVal, service: 'mem', method: 'get'};
-        global.distribution.local.comm.send([configuration], remote, (e, v) => {
-          if (e) {
-            callback(new Error("Could not get object"), null);
-            return;
-          }
-          callback(null, v);
-        });
-      });
-    },
+        if (configuration.key === null) {
+          const remote = { service: 'mem', method: 'get'};
+          const extractedKeys = [];
+          global.distribution[context.gid].comm.send([configuration], remote, (e, v) => {            
+            if (e instanceof Error) {
+              callback(new Error("Could not get object"), null);
+              return;
+            }
+            const extractedKeys = [];
+            Object.values(v).forEach(valueArray => {
+              valueArray.forEach(serializedStr => {
+                  if (typeof serializedStr !== 'string') return;
+                      const deserializedObj = deserialize(serializedStr); 
+                      if (deserializedObj && deserializedObj.key) {  
+                        extractedKeys.push(deserializedObj.key);
+                      }
+              });
+          });
+            callback({}, extractedKeys);
+          });
+        }
+
+        else {
+          // Retrieve value by issuing a local.comm.send request
+          const remote = {node: nodeWithVal, service: 'mem', method: 'get'};
+          global.distribution.local.comm.send([configuration], remote, (e, v) => {
+            if (e) {
+              callback(new Error("Could not get object"), null);
+              return;
+            }
+            callback(null, v);
+          });
+      };
+    });
+  },
 
 
     /*
