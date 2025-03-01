@@ -50,45 +50,45 @@ status.get = function(configuration, callback) {
   callback(new Error('Status key not found'), null);
 };
 
-// status.spawn = require('@brown-ds/distribution/distribution/local/status').spawn;
+status.spawn = require('@brown-ds/distribution/distribution/local/status').spawn;
 
-// MY IMPLEMENTATION OF SPAWN
-status.spawn = function(configuration={}, callback) {
+// // MY IMPLEMENTATION OF SPAWN
+// status.spawn = function(configuration={}, callback) {
   
-  // Create RPC stub to put into function
-  const RPCstub = createRPC(toAsync(callback));
-  const serializedRPC = serialize(RPCstub);
+//   // Create RPC stub to put into function
+//   const RPCstub = createRPC(toAsync(callback));
+//   const serializedRPC = serialize(RPCstub);
 
-  // Extract original onStart from config
-  const onStart = configuration.onStart || (() => {});
-  let onStartFunc = "let onStart = " + onStart.toString() + ";onStart();\n";
-  onStartFunc = onStartFunc.replace(/[\x00-\x1F\x7F\x80-\x9F]/g, ''); // remove command chars
+//   // Extract original onStart from config
+//   const onStart = configuration.onStart || (() => {});
+//   let onStartFunc = "let onStart = " + onStart.toString() + ";onStart();\n";
+//   onStartFunc = onStartFunc.replace(/[\x00-\x1F\x7F\x80-\x9F]/g, ''); // remove command chars
 
-  const sendIndex = serializedRPC.indexOf('distribution.local.comm');
-  let newSerializedRPC = serializedRPC.substring(0, sendIndex) + onStartFunc + serializedRPC.substring(sendIndex);
+//   const sendIndex = serializedRPC.indexOf('distribution.local.comm');
+//   let newSerializedRPC = serializedRPC.substring(0, sendIndex) + onStartFunc + serializedRPC.substring(sendIndex);
 
-  let nargs = "[null, {ip: __IP__, port: __PORT__}];";
-  nargs = nargs.replace("__IP__", "\\\"" + configuration.ip + "\\\"").replace("__PORT__", configuration.port);
+//   let nargs = "[null, {ip: __IP__, port: __PORT__}];";
+//   nargs = nargs.replace("__IP__", "\\\"" + configuration.ip + "\\\"").replace("__PORT__", configuration.port);
 
-  empty_callback = (e, v) => {};
-  let serializedCback = serialize(empty_callback);
-  serializedCback = serializedCback.replace("{\"type\":\"function\",\"value\":", "").substring(1, serializedCback.length-2);
+//   empty_callback = (e, v) => {};
+//   let serializedCback = serialize(empty_callback);
+//   serializedCback = serializedCback.replace("{\"type\":\"function\",\"value\":", "").substring(1, serializedCback.length-2);
 
-  newSerializedRPC = newSerializedRPC.replace("args.pop()", "()=>{}").replace("let message = args;", "let message = " + nargs);
+//   newSerializedRPC = newSerializedRPC.replace("args.pop()", "()=>{}").replace("let message = args;", "let message = " + nargs);
 
-  const stub = deserialize(newSerializedRPC);
-  configuration['onStart'] = stub;
+//   const stub = deserialize(newSerializedRPC);
+//   configuration['onStart'] = stub;
 
-  let options = {'cwd': path.join(__dirname, '../..'), 'detached': true, 'stdio': 'inherit'};
-  spawn('node', ['distribution.js', '--config='+serialize(configuration)], options);
-};
+//   let options = {'cwd': path.join(__dirname, '../..'), 'detached': true, 'stdio': 'inherit'};
+//   spawn('node', ['distribution.js', '--config='+serialize(configuration)], options);
+// };
 
-// status.stop = require('@brown-ds/distribution/distribution/local/status').stop;
+status.stop = require('@brown-ds/distribution/distribution/local/status').stop;
 
-status.stop = function (callback) {
-  callback(null, global.nodeConfig);
-  global.distribution.node.server.close();
-  setTimeout(() => { exit(0)}, 0.5);
-};
+// status.stop = function (callback) {
+//   callback(null, global.nodeConfig);
+//   global.distribution.node.server.close();
+//   setTimeout(() => { exit(0)}, 0.5);
+// };
 
 module.exports = status;
