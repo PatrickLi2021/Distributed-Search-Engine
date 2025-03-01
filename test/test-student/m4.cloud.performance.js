@@ -1,5 +1,5 @@
 const { performance } = require('perf_hooks');
-const distribution = require('../../config.js');
+const distribution = require('../../config');
 const crypto = require('crypto');
 
 const NUM_ENTRIES = 1000;
