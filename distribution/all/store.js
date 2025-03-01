@@ -73,7 +73,7 @@ function store(config) {
         // Normalize configuration
         configuration = {gid: context.gid, key: configuration, node: nodeToStoreOn };
 
-        // Call local.comm.send to invoke mem on that node
+        // Call local.comm.send to invoke store on that node
         const remote = {node: nodeToStoreOn, service: 'store', method: 'put'};
         global.distribution.local.comm.send([state, configuration], remote, (e, v) => {
           if (e) {
@@ -116,7 +116,100 @@ function store(config) {
       });
     },
 
+    /*
+    Parameters:
+    - configuration: an object that represents the previous state of the group. It will look something like
+      {sid1: {ip: '127.0.0.1', port: 9001}, sid2: {ip: '127.0.0.1', port: 9002}, ...} 
+    - callback: a callback function
+    */
     reconf: (configuration, callback) => {
+      // Initialize a map to store mappings from key to old node ID (to be used for comparison)
+      const keyToOldNode = new Map();
+      
+      // Fetch the NIDs of the old state of the group
+      const oldGroupNIDs = [];
+      const oldNIDToNode = {};
+    
+      Object.entries(configuration).forEach(([sid, node]) => {
+        const nid = id.getNID(node);
+        oldGroupNIDs.push(nid); 
+        oldNIDToNode[nid] = node; 
+      });
+    
+      // Get the list of object keys available in the service instance
+      global.distribution[context.gid].store.get(null, (e, keys) => {
+        if (e instanceof Error) {
+          callback(new Error("Could not get all keys"), null);
+          return;
+        }
+    
+        // Get the nodes of the new state of the group
+        global.distribution.local.groups.get(context.gid, (e, newGroupNodes) => {
+          if (e) {
+            callback(new Error("Could not get nodes for new group"), null);
+            return;
+          }
+    
+          // Populate new node mappings
+          const newGroupNIDs = [];
+          const newNIDToNode = {};
+    
+          Object.values(newGroupNodes).forEach(node => {
+            const nid = id.getNID(node);
+            newGroupNIDs.push(nid); 
+            newNIDToNode[nid] = node;
+          });
+    
+          // Determine keys that need relocation
+          let keysToRelocate = {};
+          keys.forEach(key => {
+            const oldNid = context.hash(id.getID(key), oldGroupNIDs);
+            const newNid = context.hash(id.getID(key), newGroupNIDs);
+    
+            if (oldNid !== newNid) {
+              keysToRelocate[key] = { oldNode: oldNIDToNode[oldNid], newNode: newNIDToNode[newNid] };
+            }
+          });
+    
+          let numRelocated = 0;
+          Object.keys(keysToRelocate).forEach(key => {
+            const nodeToGetFrom = keysToRelocate[key].oldNode;
+            const message = [{ key: key, gid: context.gid }];
+            const remote = { method: "get", service: "store", node: nodeToGetFrom };
+    
+            global.distribution.local.comm.send(message, remote, (e, obj) => {
+              if (e) {
+                callback(e, null);
+                return;
+              }
+    
+              // Delete from old node
+              const delMessage = [{ key: key, gid: context.gid }];
+              const delRemote = { node: nodeToGetFrom, method: "del", service: "store" };
+              global.distribution.local.comm.send(delMessage, delRemote, (e, v) => {
+                if (e) {
+                  callback(e, null);
+                  return;
+                }
+    
+                // Put on new node
+                const putMessage = [obj, { key: key, gid: context.gid }];
+                const putRemote = { node: keysToRelocate[key].newNode, method: "put", service: "store" };
+                global.distribution.local.comm.send(putMessage, putRemote, (e, v) => {
+                  if (e) {
+                    callback(e, null);
+                    return;
+                  }
+                  numRelocated++;
+                  if (numRelocated === Object.keys(keysToRelocate).length) {
+                    callback(null, v);
+                  }
+                });
+              });
+            });
+          });
+        });
+      });
     },
   };
 };

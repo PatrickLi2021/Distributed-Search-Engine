@@ -1,4 +1,3 @@
-const { serialize } = require("../util/serialization");
 const { id } = require("../util/util");
 
 function mem(config) {
@@ -37,24 +36,18 @@ function mem(config) {
         configuration = {gid: context.gid, key: configuration};
 
         if (configuration.key === null) {
-          const remote = { service: 'mem', method: 'get'};
-          const extractedKeys = [];
+          const remote = { service: 'mem', method: 'get' };
           global.distribution[context.gid].comm.send([configuration], remote, (e, v) => {            
             if (e instanceof Error) {
               callback(new Error("Could not get object"), null);
               return;
             }
-            const extractedKeys = [];
+
+            let extractedKeys = [];
             Object.values(v).forEach(valueArray => {
-              valueArray.forEach(serializedStr => {
-                  if (typeof serializedStr !== 'string') return;
-                      const deserializedObj = deserialize(serializedStr); 
-                      if (deserializedObj && deserializedObj.key) {  
-                        extractedKeys.push(deserializedObj.key);
-                      }
+              extractedKeys = [...extractedKeys, ...valueArray];
               });
-          });
-            callback({}, extractedKeys);
+          callback({}, extractedKeys);
           });
         }
 
@@ -92,10 +85,10 @@ function mem(config) {
       }
       
       if (typeof configuration === 'string') {
-        configuration = serialize({gid: context.gid, key: configuration});
+        configuration = {gid: context.gid, key: configuration};
       }
       else if (configuration === null) {
-        configuration = serialize({gid: context.gid, key: id.getID(state)});
+        configuration = {gid: context.gid, key: id.getID(state)};
       }
 
       // Get the list of NIDs
@@ -119,7 +112,7 @@ function mem(config) {
           }
           callback(null, v);
         });
-        });
+      });
     },
 
     del: (configuration, callback) => {
@@ -135,7 +128,7 @@ function mem(config) {
         const nids = Object.values(v).map(node => id.getNID(node));
 
         // Normalize configuration
-        configuration = serialize({gid: context.gid, key: configuration});
+        configuration = {gid: context.gid, key: configuration};
         
         // Run the hashing algorithm on the KID and the NIDs
         const nodeID = context.hash(kid, nids);
@@ -161,66 +154,87 @@ function mem(config) {
     - callback: a callback function
     */
     reconf: (configuration, callback) => {
-      // Initialize a map to store mappings from key to old node ID and new node ID (to be used for comparison)
+      // Initialize a map to store mappings from key to old node ID (to be used for comparison)
       const keyToOldNode = new Map();
-      const keyToNewNode = new Map();
       
       // Fetch the NIDs of the old state of the group
-      const oldGroupNIDs = Object.values(configuration).map(node => id.getNID(node));
-      const oldNIDToNode = new Map();
+      const oldGroupNIDs = [];
+      const oldNIDToNode = {};
+    
       Object.entries(configuration).forEach(([sid, node]) => {
-        oldGroupNIDs.push(id.getNID(node)); 
-        oldNIDToNode.set(id.getNID(node), node);
+        const nid = id.getNID(node);
+        oldGroupNIDs.push(nid); 
+        oldNIDToNode[nid] = node; 
       });
-      
+    
       // Get the list of object keys available in the service instance
       global.distribution[context.gid].mem.get(null, (e, keys) => {
-        if (e) {
+        if (e instanceof Error) {
           callback(new Error("Could not get all keys"), null);
           return;
         }
-        let keysToRelocate = [];
-        
+    
         // Get the nodes of the new state of the group
-        global.distribution.local.groups.get(context.gid, (err, newGroupNodes) => {
-          if (err) {
+        global.distribution.local.groups.get(context.gid, (e, newGroupNodes) => {
+          if (e) {
             callback(new Error("Could not get nodes for new group"), null);
             return;
           }
-          // Go through the keys we retrieved from get(null) and calculate the node they USED to be on
-          keys.forEach(key => {
-            const kid = id.getID(key);
-            const oldNodeID = context.hash(kid, oldGroupNIDs);
-            keyToOldNode.set(key, oldNodeID);
+    
+          // Populate new node mappings
+          const newGroupNIDs = [];
+          const newNIDToNode = {};
+    
+          Object.values(newGroupNodes).forEach(node => {
+            const nid = id.getNID(node);
+            newGroupNIDs.push(nid); 
+            newNIDToNode[nid] = node;
           });
-          const newGroupNIDs = Object.values(newGroupNodes).map(node => id.getNID(node));
-          
-          // Using the new group NIDs, calculate the NEW node (if there is a new node) that each key should be placed on
-          // Store a list of keys to be relocated
+    
+          // Determine keys that need relocation
+          let keysToRelocate = {};
           keys.forEach(key => {
-            const kid = id.getID(key, newGroupNIDs);
-            const newGroupID = context.hash(kid, newGroupNIDs);
-            if (keyToOldNode.get(key) !== newGroupID) {
-              keysToRelocate.push(key);
+            const oldNid = context.hash(id.getID(key), oldGroupNIDs);
+            const newNid = context.hash(id.getID(key), newGroupNIDs);
+    
+            if (oldNid !== newNid) {
+              keysToRelocate[key] = { oldNode: oldNIDToNode[oldNid], newNode: newNIDToNode[newNid] };
             }
           });
-
-          // For each key to be relocated, we...delete it from that old node, and put it on the new node
-          keysToRelocate.forEach(key => {
-            const nodeToGetFrom = oldNIDToNode[keyToOldNode[key]]; // calculates the old node this key was on
-            // Get the object from the old node...
-            const remote = {node: nodeToGetFrom, service: "mem", method: "get"};
-            global.distribution.local.comm.send([key], remote, (e, obj) => {
-              // Delete that key from the old node...
-              const remote = {node: nodeToGetFrom, service: "mem", method: "del"};
-              global.distribution.local.comm.send([key], remote, (e, v) => { 
-                // Call all.put to put object on new node in updated group
-                global.distribution[context.gid].put(obj, key, (e, v) => {
+    
+          let numRelocated = 0;
+          Object.keys(keysToRelocate).forEach(key => {
+            const nodeToGetFrom = keysToRelocate[key].oldNode;
+            const message = [{ key: key, gid: context.gid }];
+            const remote = { method: "get", service: "mem", node: nodeToGetFrom };
+    
+            global.distribution.local.comm.send(message, remote, (e, obj) => {
+              if (e) {
+                callback(e, null);
+                return;
+              }
+    
+              // Delete from old node
+              const delMessage = [{ key: key, gid: context.gid }];
+              const delRemote = { node: nodeToGetFrom, method: "del", service: "mem" };
+              global.distribution.local.comm.send(delMessage, delRemote, (e, v) => {
+                if (e) {
+                  callback(e, null);
+                  return;
+                }
+    
+                // Put on new node
+                const putMessage = [obj, { key: key, gid: context.gid }];
+                const putRemote = { node: keysToRelocate[key].newNode, method: "put", service: "mem" };
+                global.distribution.local.comm.send(putMessage, putRemote, (e, v) => {
                   if (e) {
-                    callback(new Error("Could not put key on node"), null);
+                    callback(e, null);
                     return;
                   }
-                  callback(null, v);
+                  numRelocated++;
+                  if (numRelocated === Object.keys(keysToRelocate).length) {
+                    callback(null, v);
+                  }
                 });
               });
             });

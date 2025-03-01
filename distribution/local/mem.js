@@ -1,5 +1,5 @@
 
-const localStore = new Map();
+const localStore = new Map(); // { {gid: {key: object}, ...}, ...}
 const { local } = require('@brown-ds/distribution');
 const id = require('../util/id');
 const log = require('../util/log');
@@ -11,21 +11,39 @@ const { serialize, deserialize } = require('../util/serialization');
 * - configuration: The string key we want to be associated with this object
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
+
 function put(state, configuration, callback) {
-    if (typeof configuration == "string") {
-        configuration = serialize({ gid: "local", key: configuration });
-        localStore.set(configuration, state);
-    }
-    // For null case, hash the state and use that as the key
     if (configuration == null) {
         const hashKey = id.getID(state);
-        configuration = serialize({ gid: "local", key: hashKey });
-        localStore.set(configuration, state);
-    } else {
-        localStore.set(serialize(configuration), state);
+        const localData = localStore.has("local") ? localStore.get("local") : {};
+        localData[hashKey] = state;
+        localStore.set("local", localData); 
+    } 
+    else if (typeof configuration === 'object') {
+        // Check if the gid already exists in the store
+        const currentData = localStore.has(configuration.gid) ? localStore.get(configuration.gid) : {};
+        currentData[configuration.key] = state; // Add the new key-value pair to the existing data
+        localStore.set(configuration.gid, currentData); // Update the gid with the merged object
     }
+    else if (typeof configuration == "string") {
+        if (!localStore.has("local")) {
+            localStore.set("local", {}); 
+        }
+        const localData = localStore.get("local");
+        localData[configuration] = state; // Add the new key-value pair
+        localStore.set("local", localData);  // Ensure we update the map
+    }
+    else {
+        const currentData = localStore.has(configuration.gid) ? localStore.get(configuration.gid) : {};
+        currentData[configuration.key] = state; // Add the new key-value pair to the existing data
+        localStore.set(configuration.gid, currentData); // Update the gid with the merged object
+    }    
     callback(null, state);
-};
+}
+
+
+
+
 
 /*
 * Parameters:
@@ -33,23 +51,40 @@ function put(state, configuration, callback) {
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
 function get(configuration, callback) {
-    // Handle null case
     if (configuration === null || configuration.key === null) {
-        let keysArray = Array.from(localStore.keys()).map(deserialize).map(obj => obj.key);
-        callback(null, keysArray);
+        let keys = [];
+        for (const [gid, subMap] of localStore) {
+            if (typeof subMap === "object") {
+                keys.push(...Object.keys(subMap)); 
+            }
+        }
+        callback(null, keys);
         return;
     }
-    if (typeof configuration !== "string") {
-        configuration = serialize(configuration);
+    
+    let gid = "";
+    let key = "";
+    if (typeof configuration === 'object') {
+        gid = configuration.gid;
+        key = configuration.key;
     } 
-    configuration = serialize({gid: "local", key: configuration});
-    if (!localStore.has(configuration)) {
+    else {
+        gid = 'local';
+        key = configuration;
+    }
+    if (!localStore.has(gid)) {
+        callback(new Error("Local store did not have object associated with gid"), null);
+        return;
+    }
+    let gidMap = localStore.get(gid);
+    if (!gidMap || !(key in gidMap)) {
         callback(new Error("Local store did not have object associated with key"), null);
         return;
     }
-    const objToGet = localStore.get(configuration);
+    const objToGet = gidMap[key];
     callback(null, objToGet);
 }
+
 
 /*
 * Parameters:
@@ -58,16 +93,27 @@ function get(configuration, callback) {
 */
 function del(configuration, callback) {
     if (typeof configuration === 'string') {
-        configuration = {gid: "local", key: configuration};
+        configuration = { gid: "local", key: configuration };
     }
-    configuration = serialize(configuration);
-    if (localStore.has(configuration)) {
-        const objToDelete = localStore.get(configuration);
-        localStore.delete(configuration);
-        callback(null, objToDelete);
+    const { gid, key } = configuration;
+    if (!localStore.has(gid)) {
+        callback(new Error("Object to delete not in map"), null);
         return;
     }
-    callback(new Error("Object to delete not in map"), null);
-};
+    let gidMap = localStore.get(gid);
+    if (!gidMap || !(key in gidMap)) {
+        callback(new Error("Object to delete not in map"), null);
+        return;
+    }
+    const objToDelete = gidMap[key];
+    delete gidMap[key];
+
+    // If the group becomes empty, remove it from localStore
+    if (Object.keys(gidMap).length === 0) {
+        localStore.delete(gid);
+    }
+    callback(null, objToDelete);
+}
+
 
 module.exports = {put, get, del};

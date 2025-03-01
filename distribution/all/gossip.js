@@ -10,8 +10,9 @@ const gossip = function(config) {
 
   return {
     send: (payload, remote, callback) => {
-      // Send payload to remote
-
+      console.log("\n");
+      console.log("INSIDE GOSSIP SEND");
+      console.log('\n');
       // Put nodes in a list and form a new group
       global.distribution.local.groups.get(context.gid, (e, v) => {
         if (e) {
@@ -39,11 +40,13 @@ const gossip = function(config) {
             }
           });
         })
-
       })
     },
 
     at: (period, func, callback) => {
+      console.log("\n");
+      console.log("INSIDE GOSSIP AT");
+      console.log('\n');
       // Error check parameters  
       if (typeof func !== 'function' || typeof period !== 'number' || period <= 0) {
           callback(new Error("Invalid parameters"), null);
@@ -59,7 +62,6 @@ const gossip = function(config) {
           clearInterval(intervalID);
           callback(null, "Task stopped successfully");
     },
-
   };
 };
 

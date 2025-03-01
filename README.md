@@ -199,20 +199,29 @@ For `local.mem`, it operates similarly to `store`. The `put` method stores an ob
 The key challenges during this implementation were encountered during the implementation of the distributed versions of `mem` and `store`. I had difficulty understanding how to incorporate the additional group-related metadata into those services and being able to distinguish internally between identical keys. I also think that figuring out how to configure the local versions of these services to be able to interoperate with the distributed versions was challenging.
 
 #### Lab Portion
-For the lab portion, I had to
+For the lab portion, I had to first implement a `null` interface for both `mem.get` and `store.get` that allowed the
+system to retrieve all the keys on a particular service instance. This involved adding special case to see if the input to these methods involved a `null` configuration key and then iterating over either a `map` in the case of `mem` or through a particular file hierarchy in the case of `store` to actually obtain those keys.
+
+Next, I implemented the `reconf` functionality for both `mem` and `store`. This `reconf` function is responsible for redistributing objects across nodes when the configuration of a distributed system changes. It first retrieves the current mapping of keys to their old nodes using a hashing function and then determines the new nodes where each key should be placed. If a key's assigned node has changed, it is marked for relocation. The function then iterates over these keys, retrieving their values from the old nodes, deleting them from the old location, and storing them on the new nodes. 
+
+Lastly, I integrated functionality for detecting the need to reconfigure. This was done by modifying the `gossip` protocol that I introduced into the system from M3. The service now establishes a lightweight periodic check, where each node occasionally queries or receives updates from its peers about the current system membership. 
 
 ### Correctness & Performance Characterization
 
 #### Correctness
+In order to characterize correctness, I introduced 7 new tests into the system to test my `mem` and `store` implementations. These tests specifically test the insertion, retrieval, and deletion of key-value pairs. They ensure that values can be correctly stored, retrieved, and removed while also checking how the system handles error conditions and edge cases. Several key behaviors are tested, including successful deletions, where a deleted key returns its original value, and failed deletions, where attempting to delete a non-existent key correctly results in an error. 
 
+The tests also cover handling of special key values, such as using `null` as a key or an object as a key and makes sure that the system processes them appropriately. Additionally, they check whether previously stored values remain intact when an unrelated key is deleted. Edge cases include deleting a key that was never stored, using a `null` key, and checking if the system allows complex objects as keys instead of just strings.
+
+For the lab portion, I also wrote a test to double check the functionality of my reconfiguration detection mechanism. To implement this test, I created node additions and removals in the system, then verified that the reconfiguration detection mechanism correctly identified the changes and triggered the expected updates.
 
 #### Performance
+In order to characterize performance, I deployed my implementation on 3 AWS nodes and measured its latency and throughput during insertion and retrieval operations. To ensure accurate benchmarking, I structured the client’s execution into three distinct stages: first, I generated 1,000 random key-value pairs and stored them in memory to eliminate object creation overhead. Next, I inserted all objects into the key-value store while recording latency (time per operation) and throughput (operations per second) for the insertion phase. Finally, I queried all 1000 objects by their keys, again measuring the system’s retrieval latency and throughput using the `performance.now()` functionality of Node.js.
 
 ### Key Feature
 > Why is the `reconf` method designed to first identify all the keys to be relocated and then relocate individual objects instead of fetching all the objects immediately and then pushing them to their corresponding locations?
 
-
-
-
+By determining the keys in advance, the system can avoid redundant lookups and minimize the risk of conflicts that could occur if keys were fetched and relocated in a single step, especially in a distributed environment where a lot of data (including nodes as well) can be moving in and out of the system at any point in time. Additionally, this approach 
+more easily enables batching processing where you can precompute target locations and grouping operations to reduce network operations. 
 
 > ...

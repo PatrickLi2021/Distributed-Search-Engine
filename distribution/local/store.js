@@ -90,6 +90,9 @@ function get(configuration, callback) {
 
   // Handle null case
   if (configuration === null) {
+    console.log("\n");
+    console.log("in store get null case");
+    console.log("\n");
     dirPath = path.join(process.cwd(), group + '/');
     getDirectories(dirPath, function (err, res) {
       if (err) {
@@ -97,6 +100,9 @@ function get(configuration, callback) {
         return;
       } else {
         res = res.filter(filePath => path.extname(filePath) === '.json').map(filePath => path.basename(filePath, '.json')); 
+        console.log("\n");
+        console.log("res: ", res);
+        console.log("\n");
         callback(null, res);
         return;
       }

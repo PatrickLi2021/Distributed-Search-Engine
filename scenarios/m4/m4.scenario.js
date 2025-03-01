@@ -99,7 +99,7 @@ test('(5 pts) (scenario) use mem.reconf', (done) => {
 
   // Create a group with any number of nodes
   const mygroupGroup = {};
-  mygroupGroup[id.getSID(distribution.node.config)] = distribution.node.config; // Adding the current node to the group
+  mygroupGroup[id.getSID(n1)] = n1; // Adding the current node to the group
   // Add more nodes to the group...
   mygroupGroup[id.getSID(n2)] = n2;
 
@@ -111,9 +111,6 @@ test('(5 pts) (scenario) use mem.reconf', (done) => {
     {
       key: 'b', item: {first: 'John', last: 'Smith'},
     },
-    {
-      key: 'b', item: {first: 'Joe', last: 'Schmoe'}
-    }
   ];
   // Experiment with different hash functions...
   const config = {gid: 'mygroup', hash: util.naiveHash};
@@ -122,7 +119,6 @@ test('(5 pts) (scenario) use mem.reconf', (done) => {
     // Now, place each one of the items you made inside the group...
     distribution.mygroup.mem.put(keysAndItems[0].item, keysAndItems[0].key, (e, v) => {
       distribution.mygroup.mem.put(keysAndItems[1].item, keysAndItems[1].key, (e, v) => {
-        distribution.mygroup.mem.put(keysAndItems[2].item, keysAndItems[2].key, (e, v) => {
         // We need to pass a copy of the group's nodes before the changes to reconf()
         const groupCopy = {...mygroupGroup};
 
@@ -138,7 +134,6 @@ test('(5 pts) (scenario) use mem.reconf', (done) => {
                 checkPlacement();
               });
             });
-    });
   });
   })
 });
@@ -149,6 +144,7 @@ test('(5 pts) (scenario) use mem.reconf', (done) => {
   const checkPlacement = (e, v) => {
     const messages = [
       [{key: keysAndItems[0].key, gid: 'mygroup'}],
+      [{key: keysAndItems[1].key, gid: 'mygroup'}]
     ];
 
     // Based on where you think the items should be, send the messages to the right nodes...
@@ -161,6 +157,16 @@ test('(5 pts) (scenario) use mem.reconf', (done) => {
         done(error);
         return;
       }
+      const remote = {node: n2, service: 'mem', method: 'get'};
+      distribution.local.comm.send(messages[1], remote, (e, v) => {
+        try {
+          expect(e).toBeFalsy();
+          expect(v).toEqual(keysAndItems[1].item);
+        } catch (error) {
+          done(error);
+          return;
+        }
+      });
 
       // Write checks for the rest of the items...
       done(); // Only call `done()` once all checks are written
