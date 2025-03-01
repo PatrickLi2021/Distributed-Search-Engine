@@ -215,13 +215,18 @@ The tests also cover handling of special key values, such as using `null` as a k
 
 For the lab portion, I also wrote a test to double check the functionality of my reconfiguration detection mechanism. To implement this test, I created node additions and removals in the system, then verified that the reconfiguration detection mechanism correctly identified the changes and triggered the expected updates.
 
+In total, these tests take 3.4123 seconds to execute.
+
 #### Performance
-In order to characterize performance, I deployed my implementation on 3 AWS nodes and measured its latency and throughput during insertion and retrieval operations. To ensure accurate benchmarking, I structured the client’s execution into three distinct stages: first, I generated 1,000 random key-value pairs and stored them in memory to eliminate object creation overhead. Next, I inserted all objects into the key-value store while recording latency (time per operation) and throughput (operations per second) for the insertion phase. Finally, I queried all 1000 objects by their keys, again measuring the system’s retrieval latency and throughput using the `performance.now()` functionality of Node.js.
+In order to characterize performance, I deployed my implementation on 3 AWS nodes and measured its latency and throughput during insertion and retrieval operations. To ensure accurate benchmarking, I structured the client’s execution into three distinct stages: first, I generated 1,000 random key-value pairs and stored them in memory to eliminate object creation overhead. Next, I inserted all objects into the key-value store while recording the time it takes to perform all the operations for insertion. Finally, I queried all 1000 objects by their keys, again measuring the system’s retrieval latency using the `performance.now()` functionality of Node.js. From this, I was able to derive a throughput value as well using the number of operations. 
+
+In terms of specific implementation details, I created 3 separate EC2 instances/nodes on AWS. From there, I configured the security group settings to allow inbound TCP traffic on the port 1234. I then ran the `./distribution` process on each instance using the IP of 0.0.0.0 and the port 1234 to boot up each node. In my test file, I used the public IP and port 1234 to configure each node.
+
+The performance metrics are specified in the `package.json` file.
 
 ### Key Feature
 > Why is the `reconf` method designed to first identify all the keys to be relocated and then relocate individual objects instead of fetching all the objects immediately and then pushing them to their corresponding locations?
 
-By determining the keys in advance, the system can avoid redundant lookups and minimize the risk of conflicts that could occur if keys were fetched and relocated in a single step, especially in a distributed environment where a lot of data (including nodes as well) can be moving in and out of the system at any point in time. Additionally, this approach 
-more easily enables batching processing where you can precompute target locations and grouping operations to reduce network operations. 
+By determining the keys in advance, the system can avoid redundant lookups and minimize the risk of conflicts that could occur if keys were fetched and relocated in a single step, especially in a distributed environment where a lot of data (including nodes as well) can be moving in and out of the system at any point in time. Additionally, this approach more easily enables batching processing where you can precompute target locations and grouping operations to reduce network operations. 
 
 > ...

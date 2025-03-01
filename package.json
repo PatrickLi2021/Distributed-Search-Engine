@@ -125,13 +125,15 @@
             "ssd-gb": 59
         },
         "throughput": {
-            "dev": [
-                "Launching Nodes: 8.3243 nodes/second"
+            "aws": [
+                "Insertion: 10.391 insertions/second",
+                "Query: 214.706 queries/second"
             ]
         },
         "latency": {
-            "dev": [
-                "Launching Nodes:  95.0853 ms/node launched"
+            "aws": [
+                "Insertion: 96.2343 seconds/insertion",
+                "Query: 0.004657 seconds/query"
             ]
         }
     }

@@ -1,9 +1,9 @@
 const { performance } = require('perf_hooks');
 const distribution = require('../../config');
-const crypto = require('crypto');
 const id = distribution.util.id;
 
 const NUM_ENTRIES = 1000;
+jest.setTimeout(400000);
 
 const localStore = {};
 
@@ -20,8 +20,8 @@ const generateObject = () => ({
   createdAt: new Date().toISOString(),
 });
 
-while (Object.keys(kv).length < 1000) {
-  kv[generateKey()] = generateObject();
+while (Object.keys(localStore).length < 1000) {
+  localStore[generateKey()] = generateObject();
 }
 
 test('(1 pts) timing insert', (done) => {
@@ -32,20 +32,18 @@ test('(1 pts) timing insert', (done) => {
   let insertionCount = 0;
   let queryCount = 0;
   let insertionStart = performance.now();
-  for (const key of Object.keys(kv)) {
-    distribution.mygroup.mem.put(kv[key], kv, (e, v) => {
-      totalInserts += 1;
+  for (const key of Object.keys(localStore)) {
+    distribution.mygroup.mem.put(localStore[key], localStore, (e, v) => {
+      insertionCount += 1;
       if (insertionCount == NUM_ENTRIES) {
-        let insertionEnd = performance.now();
-        console.log("Insertion Time: " + (insertionEnd - insertionStart) + " ms");
+        console.log("Insertion Time: " + (performance.now() - insertionStart) + " ms");
 
         let queryStart = performance.now();
         for (const key of Object.keys(localStore)) {
           distribution.mygroup.mem.get(key, (e, v) => {
-            totalQueries += 1;
+            queryCount += 1;
             if (queryCount === NUM_ENTRIES) {
-              let queryEnd = performance.now();
-              console.log("Query Time: " + (queryEnd - queryStart) + " ms");
+              console.log("Query Time: " + (performance.now() - queryStart) + " ms");
               done();
             }
           });
