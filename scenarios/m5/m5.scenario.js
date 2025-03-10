@@ -94,9 +94,18 @@ test('(10 pts) (scenario) all.mr:dlib', (done) => {
 */
 
   const mapper = (key, value) => {
+    const res = [];
+    const words = value.split(/\s+/).filter(Boolean); 
+    for (let i = 0; i < words.length; i++) {
+      res.push({[words[i]]: 1});
+    }
+    return res;
   };
 
   const reducer = (key, values) => {
+    let mapping = {};
+    mapping[key] = values.reduce((acc, num) => acc + num, 0);
+    return mapping;
   };
 
   const dataset = [
@@ -164,10 +173,14 @@ test('(10 pts) (scenario) all.mr:tfidf', (done) => {
 */
 
   const mapper = (key, value) => {
+    // console.log("MAPPER KEY: ", key);
+    // console.log("MAPPER VALUE: ", value);
   };
 
   // Reduce function: calculate TF-IDF for each word
   const reducer = (key, values) => {
+    // console.log("REDUCER KEY: ", key);
+    // console.log("REDUCER VALUE: ", values);
   };
 
   const dataset = [
@@ -236,16 +249,210 @@ test('(10 pts) (scenario) all.mr:crawl', (done) => {
     done(new Error('Implement this test.'));
 });
 
-test('(10 pts) (scenario) all.mr:urlxtr', (done) => {
-    done(new Error('Implement the map and reduce functions'));
+test.only('(10 pts) (scenario) all.mr:urlxtr', (done) => {
+  const mapper = (key, value) => {
+    const webPages = {
+      'doc1': 'Visit <a href="https://example.com/page1">Page 1</a> and <a href="https://example.com/page2">Page 2</a>.',
+      'doc2': 'Here is a link to <a href="https://example.com/page2">Page 2</a> again!',
+      'doc3': 'Check out <a href="https://example.com/page3">Page 3</a> for details.',
+    };
+    const urlRegex = /href="(https?:\/\/[^"]+)"/g;
+    const content = webPages[value] || '';
+    let match;
+    const urls = new Set();
+    
+    while ((match = urlRegex.exec(content)) !== null) {
+      urls.add(match[1]);
+    }
+
+    // Returning URLs as key-value pairs
+    return Array.from(urls).map(url => ({ [url]: 1 }));
+  };
+
+  const reducer = (key, values) => {
+    // Reducing values to count the occurrences of each URL
+    return { [key]: values.length };
+  };
+
+  const dataset = [
+    { 'doc1': 'doc1' },
+    { 'doc2': 'doc2' },
+    { 'doc3': 'doc3' },
+  ];
+
+  const expected = [
+    { 'https://example.com/page1': 1 },
+    { 'https://example.com/page2': 2 },
+    { 'https://example.com/page3': 1 },
+  ];
+
+  const doMapReduce = () => {
+    distribution.urlxtr.store.get(null, (e, v) => {
+      try {
+        expect(v.length).toBe(dataset.length);
+      } catch (e) {
+        done(e);
+      }
+
+      distribution.urlxtr.mr.exec({ keys: v, map: mapper, reduce: reducer }, (e, v) => {
+        try {
+          expect(v).toEqual(expect.arrayContaining(expected));
+          done();
+        } catch (e) {
+          done(e);
+        }
+      });
+    });
+  };
+
+  let cntr = 0;
+
+  dataset.forEach((o) => {
+    const key = Object.keys(o)[0];
+    const pageId = o[key];
+    distribution.urlxtr.store.put(pageId, key, (e, v) => {
+      cntr++;
+      if (cntr === dataset.length) {
+        doMapReduce();
+      }
+    });
+  });
 });
 
 test('(10 pts) (scenario) all.mr:strmatch', (done) => {
-    done(new Error('Implement the map and reduce functions'));
+  const mapper = (key, value) => {
+    const regex = /regex/i;
+    if (regex.test(value)) {
+      return [{ [key]: value }];
+    }
+    return [];
+  };
+  
+
+  const reducer = (key, values) => {
+    return key;
+  };
+  
+  const dataset = [
+    { 'obj1': 'first object' },
+    { 'obj2': 'second object' },
+    { 'obj3': 'Third object, contains regex' },
+    { 'obj4': 'Fourth object, contains regex' },
+    { 'obj5': 'Fifth object, contains regex' },
+    { 'obj6': 'Sixth object, contains regex' },
+  ];
+  
+  const expected = [
+    'obj3',
+    'obj4',
+    'obj5',
+    'obj6',
+  ];
+
+  // Test for this scenario
+  const doMapReduce = (cb) => {
+    distribution.strmatch.store.get(null, (e, v) => {
+      try {
+        expect(v.length).toBe(dataset.length);
+      } catch (e) {
+        done(e);
+      }
+
+      distribution.strmatch.mr.exec({keys: v, map: mapper, reduce: reducer}, (e, v) => {
+        try {
+          expect(v).toEqual(expect.arrayContaining(expected));
+          done();
+        } catch (e) {
+          done(e);
+        }
+      });
+    });
+  };
+
+  let cntr = 0;
+
+  // Send the dataset to the cluster
+  dataset.forEach((o) => {
+    const key = Object.keys(o)[0];
+    const value = o[key];
+    distribution.strmatch.store.put(value, key, (e, v) => {
+      cntr++;
+      // Once the dataset is in place, run the map reduce
+      if (cntr === dataset.length) {
+        doMapReduce();
+      }
+    });
+  });
 });
 
 test('(10 pts) (scenario) all.mr:ridx', (done) => {
-    done(new Error('Implement the map and reduce functions'));
+  const mapper = (key, value) => {
+    const words = value.toLowerCase().split(/\s+/);
+    return words.map(word => ({ [word]: key })); 
+  };
+  
+
+  const reducer = (key, values) => {
+    const uniqueDocs = [...new Set(values)].sort(); 
+    return { [key]: uniqueDocs };
+  };
+  
+  
+  const dataset = [
+    { 'doc1': 'check stuff level' },
+    { 'doc2': 'check stuff level' },
+    { 'doc3': 'level check stuff' },
+    { 'doc4': 'level right' },
+    { 'doc5': 'link check stuff' },
+    { 'doc6': 'right' },
+    { 'doc7': 'simpl link check' },
+    { 'doc8': 'stuff level check' },
+    { 'doc9': 'stuff level right' },
+  ];
+    
+  const expected = [
+    {"level": ["doc1", "doc2", "doc3", "doc4", "doc8", "doc9"]}, 
+    {"simpl": ["doc7"]}, 
+    {"link": ["doc5", "doc7"]}, 
+    {"check": ["doc1", "doc2", "doc3", "doc5", "doc7", "doc8"]}, 
+    {"stuff": ["doc1", "doc2", "doc3", "doc5", "doc8", "doc9"]}, 
+    {"right": ["doc4", "doc6", "doc9"]}
+  ];
+  
+  // Test for this scenario
+  const doMapReduce = (cb) => {
+    distribution.ridx.store.get(null, (e, v) => {
+      try {
+        expect(v.length).toBe(dataset.length);
+      } catch (e) {
+        done(e);
+      }
+
+      distribution.ridx.mr.exec({keys: v, map: mapper, reduce: reducer}, (e, v) => {
+        try {
+          expect(v).toEqual(expect.arrayContaining(expected));
+          done();
+        } catch (e) {
+          done(e);
+        }
+      });
+    });
+  };
+
+  let cntr = 0;
+
+  // Send the dataset to the cluster
+  dataset.forEach((o) => {
+    const key = Object.keys(o)[0];
+    const value = o[key];
+    distribution.ridx.store.put(value, key, (e, v) => {
+      cntr++;
+      // Once the dataset is in place, run the map reduce
+      if (cntr === dataset.length) {
+        doMapReduce();
+      }
+    });
+  });
 });
 
 test('(10 pts) (scenario) all.mr:rlg', (done) => {
@@ -314,7 +521,21 @@ beforeAll((done) => {
               const tfidfConfig = {gid: 'tfidf'};
               distribution.local.groups.put(tfidfConfig, tfidfGroup, (e, v) => {
                 distribution.tfidf.groups.put(tfidfConfig, tfidfGroup, (e, v) => {
-                  done();
+                  const strmatchConfig = {gid: 'strmatch'};
+                  distribution.local.groups.put(strmatchConfig, strmatchGroup, (e, v) => {
+                    distribution.strmatch.groups.put(strmatchConfig, strmatchGroup, (e, v) => {
+                      const ridxConfig = {gid: 'ridx'};
+                      distribution.local.groups.put(ridxConfig, ridxGroup, (e, v) => {
+                        distribution.ridx.groups.put(ridxConfig, ridxGroup, (e, v) => {
+                          const urlxtrConfig = {gid: 'urlxtr'};
+                          distribution.local.groups.put(urlxtrConfig, urlxtrGroup, (e, v) => {
+                            distribution.urlxtr.groups.put(urlxtrConfig, urlxtrGroup, (e, v) => {
+                          done();
+                        })
+                      });
+                    })
+                  });
+                  })
                 });
               });
             });
@@ -323,6 +544,7 @@ beforeAll((done) => {
       });
     });
   });
+});
 });
 
 afterAll((done) => {

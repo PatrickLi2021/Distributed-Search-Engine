@@ -3,7 +3,7 @@
     "version": "0.1.11",
     "description": "A library for building distributed systems.",
     "main": "distribution.js",
-    "useLibrary": false,
+    "useLibrary": true,
     "directories": {
         "test": "test"
     },
@@ -135,6 +135,21 @@
                 "Insertion: 96.2343 seconds/insertion",
                 "Query: 0.004657 seconds/query"
             ]
+        }
+    },
+    "reportM5": {
+        "hours": 999,
+        "loc": 999,
+        "dev": {
+            "cpu-no": 10,
+            "mem-gb": 8.02,
+            "ssd-gb": 59
+        },
+        "throughput": {
+            "local": []
+        },
+        "latency": {
+            "local": []
         }
     }
 }

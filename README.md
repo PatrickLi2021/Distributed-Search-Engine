@@ -229,4 +229,22 @@ The performance metrics are specified in the `package.json` file.
 
 By determining the keys in advance, the system can avoid redundant lookups and minimize the risk of conflicts that could occur if keys were fetched and relocated in a single step, especially in a distributed environment where a lot of data (including nodes as well) can be moving in and out of the system at any point in time. Additionally, this approach more easily enables batching processing where you can precompute target locations and grouping operations to reduce network operations. 
 
+## M5: Distributed Execution Engine
+
+### Summary of Implementation
+
+### Key Challenges
+
+#### Lab Portion
+
+### Correctness & Performance Characterization
+
+#### Correctness
+
+#### Performance
+
+### Key Feature
+
+
+
 > ...
