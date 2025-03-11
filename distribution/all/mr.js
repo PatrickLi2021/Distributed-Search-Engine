@@ -39,8 +39,21 @@ function mr(config) {
    * @param {MRConfig} configuration
    * @param {Callback} cb
    * @return {void}
+   * 
+   * Notes: We assume that the dataset is already stored on the group of nodes running MR
+   * 
+   * 1. Need to distribute the map function (configuration.mapper) to all nodes in context.gid group
+   *    - Each node exposes an RPC endpoint to accept the map function
+   *    - The coordinator will invoke an RPC to send the map function and a subset of the keys and their values
+   * 2. Send keys to all nodes (configuration.keys)
+   * 3. Each mapper node will execute the mapper function on the subset of the data located on it
+   * 4. 
+   * 
+   * 
    */
   function exec(configuration, cb) {
+
+
   }
 
   return {exec};

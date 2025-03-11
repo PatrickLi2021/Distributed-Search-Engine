@@ -9,6 +9,7 @@ function store(config) {
 
   return {
     get: (configuration, callback) => {
+      console.log("INSIDE STORE GET ALL");
       // Convert primary key to key identifier (KID) by applying SHA256 on the primary key
       const kid = id.getID(configuration);
 

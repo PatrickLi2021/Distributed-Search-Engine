@@ -100,9 +100,6 @@ function get(configuration, callback) {
         return;
       } else {
         res = res.filter(filePath => path.extname(filePath) === '.json').map(filePath => path.basename(filePath, '.json')); 
-        console.log("\n");
-        console.log("res: ", res);
-        console.log("\n");
         callback(null, res);
         return;
       }
