@@ -315,6 +315,7 @@ test('(10 pts) (scenario) all.mr:urlxtr', (done) => {
 
   const doMapReduce = () => {
     distribution.urlxtr.store.get(null, (e, v) => {
+      console.log("FROM GET: ", v);
       try {
         expect(v.length).toBe(dataset.length);
       } catch (e) {
@@ -346,7 +347,7 @@ test('(10 pts) (scenario) all.mr:urlxtr', (done) => {
   });
 });
 
-test.only('(10 pts) (scenario) all.mr:strmatch', (done) => {
+test('(10 pts) (scenario) all.mr:strmatch', (done) => {
   const mapper = (key, value) => {
     console.log('\n');
     console.log("MAPPER KEY: ", key);
