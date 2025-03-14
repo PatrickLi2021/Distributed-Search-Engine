@@ -22,8 +22,6 @@ var getDirectories = function (dirPath, callback) {
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
 function put(state, configuration, callback) { 
-  console.log("IN STORE PUT, state: ", state);
-  console.log("IN STORE PUT, configuration: ", configuration); 
   let filename = "";
   let group = "";
   let directory = id.getNID(global.nodeConfig);
@@ -52,7 +50,6 @@ function put(state, configuration, callback) {
     filename = configuration.key;
   }
   const dirPath = path.join(process.cwd(), group + '/' + directory);
-  console.log("In store put, dirPath: ", dirPath);
 
   // Ensure the directory exists before writing the file
   try {

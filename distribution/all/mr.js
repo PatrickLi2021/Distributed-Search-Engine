@@ -49,6 +49,7 @@ function mr(config) {
     let shufflersDone = 0;
     let reducersDone = 0;
     let mapResults = [];
+    let nodesWithConfig = new Set();
 
     // Initialize map() wrapper in configuration
     configuration['mapWrapper'] = (configuration, jobID, callback) => {
@@ -68,9 +69,6 @@ function mr(config) {
               mapRes.push(originalMapFunc(key, v));
             }
             if (mapRes.length == numKeys) {
-              console.log('\n');
-              console.log("DONE WITH MAP for this node: ", mapRes);
-              console.log('\n');
               // Notify orchestrator that this node is done with its MapReduce
               const remote = {node: configuration['execNode'], service: jobID, method: 'notify'};
               global.distribution.local.comm.send([mapRes, jobID], remote, (e, v) => {
@@ -104,11 +102,7 @@ function mr(config) {
       mapResults.push(mapRes);
       mappersDone++;
       global.distribution.local.groups.get(context.gid, (e, v) => {
-        console.log("NODES: ", v);
-        console.log("MAPPERS DONE: ", mappersDone);
-        console.log("V LENGTH: ", Object.keys(v).length);
-        if (mappersDone === Object.keys(v).length) {
-          console.log("RONALDO: ", mapResults);
+        if (mappersDone === nodesWithConfig.size) {
           mapResults = mapResults.flat(Infinity);
           // SKIP SHUFFLE PHASE FOR NOW AND JUST IMPLEMENT SINGLE REDUCER
           // Trigger the reducer function to run on the orchestrator
@@ -130,25 +124,39 @@ function mr(config) {
 
     // Register mr workflow locally (AKA on the orchestrator node)
     global.distribution.local.routes.put(configuration, jobID, (e, v) => {
-      
-      // Register mr workflow on each worker node in this group
-      global.distribution.local.groups.get(configuration['gid'], (e, v) => {
-        Object.values(v).forEach(nodeToPut => {
-          const remote = {node: nodeToPut, service: 'routes', method: 'put'};
-          global.distribution.local.comm.send([configuration, jobID], remote, (e, v) => {
-            if (e) {
-              cb(new Error("Could not send mr config to node"), null);
-              return;
-            }
-            // ... and have worker node start executing map()
-            const remote = {node: nodeToPut, service: jobID, method: 'mapWrapper'};
+      keys.forEach(key => {
+        const kid = id.getID(key);
+
+        // Find the node to retrieve the object on
+        global.distribution.local.groups.get(context.gid, (e, v) => {
+          if (e) {
+            callback(new Error("Could not get nodes"), null);
+            return;
+          }
+          const nids = Object.values(v).map(node => id.getNID(node));
+          
+          // Run the hashing algorithm on the KID and the NIDs
+          const nodeID = context.hash(kid, nids);
+          const nodeToPut = Object.values(v).find(node => id.getNID(node) === nodeID);
+
+          if (!nodesWithConfig.has(id.getNID(nodeToPut))) {
+            // Register mr workflow on each worker node in this group
+            const remote = {node: nodeToPut, service: 'routes', method: 'put'};
             global.distribution.local.comm.send([configuration, jobID], remote, (e, v) => {
-              console.log("FINISHED ALL OF EXEC: ", v);
-              cb(null, v);
+              nodesWithConfig.add(id.getNID(nodeToPut));
+              if (e) {
+                cb(new Error("Could not send mr config to node"), null);
+                return;
+              }
+              // ... and have worker node start executing map()
+              const remote = {node: nodeToPut, service: jobID, method: 'mapWrapper'};
+              global.distribution.local.comm.send([configuration, jobID], remote, (e, v) => {
+                cb(null, v);
+              });
             });
-          });
-        })
-      });
+          }
+        });
+    });
     })
   }
 
