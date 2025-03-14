@@ -32,6 +32,7 @@ groups.put = function(config, group, callback) {
   global.distribution[config].groups = require('../all/groups')({gid: config});
   global.distribution[config].routes = require('../all/routes')({gid: config});
   global.distribution[config].mem = require('../all/mem')({gid: config});
+  global.distribution[config].mr = require('../all/mr')({gid: config});
   global.distribution[config].store = require('../all/store')({gid: config, hash: hash});
 
   if (typeof callback === 'function') {

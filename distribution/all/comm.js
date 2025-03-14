@@ -39,7 +39,6 @@ function comm(config) {
       for (const nodeID in groupNodes) {
         const nodeConfig = groupNodes[nodeID]; // nodeConfig = {ip, port}
         const remote = {node: nodeConfig, ...configuration};
-
         distribution.local.comm.send(message, remote, (e, v) => {
           if (e) {
             errors[nodeID] = e;

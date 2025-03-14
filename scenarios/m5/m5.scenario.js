@@ -20,7 +20,7 @@ const n1 = {ip: '127.0.0.1', port: 7110};
 const n2 = {ip: '127.0.0.1', port: 7111};
 const n3 = {ip: '127.0.0.1', port: 7112};
 
-test('(0 pts) (scenario) all.mr:ncdc', (done) => {
+test.only('(0 pts) (scenario) all.mr:ncdc', (done) => {
 /* Implement the map and reduce functions.
    The map function should parse the string value and return an object with the year as the key and the temperature as the value.
    The reduce function should return the maximum temperature for each year.
@@ -53,6 +53,7 @@ test('(0 pts) (scenario) all.mr:ncdc', (done) => {
 
   const doMapReduce = (cb) => {
     distribution.ncdc.store.get(null, (e, v) => {
+      console.log("SCENARIO v: ", v);
       try {
         expect(v.length).toBe(dataset.length);
       } catch (e) {
@@ -315,7 +316,6 @@ test('(10 pts) (scenario) all.mr:urlxtr', (done) => {
 
   const doMapReduce = () => {
     distribution.urlxtr.store.get(null, (e, v) => {
-      console.log("FROM GET: ", v);
       try {
         expect(v.length).toBe(dataset.length);
       } catch (e) {
@@ -349,10 +349,6 @@ test('(10 pts) (scenario) all.mr:urlxtr', (done) => {
 
 test('(10 pts) (scenario) all.mr:strmatch', (done) => {
   const mapper = (key, value) => {
-    console.log('\n');
-    console.log("MAPPER KEY: ", key);
-    console.log("MAPPER VALUE: ", value);
-    console.log('\n');
     const regex = /regex/i;
     if (regex.test(value)) {
       return [{ [key]: value }];
@@ -361,19 +357,16 @@ test('(10 pts) (scenario) all.mr:strmatch', (done) => {
   };
   
   const reducer = (key, values) => {
-    console.log('\n');
-    console.log("REDUCER KEY: ", key);
-    console.log('\n');
     return key;
   };
   
   const dataset = [
     { 'obj1': 'first object' },
     { 'obj2': 'second object' },
-    // { 'obj3': 'Third object, contains regex' },
-    // { 'obj4': 'Fourth object, contains regex' },
-    // { 'obj5': 'Fifth object, contains regex' },
-    // { 'obj6': 'Sixth object, contains regex' },
+    { 'obj3': 'Third object, contains regex' },
+    { 'obj4': 'Fourth object, contains regex' },
+    { 'obj5': 'Fifth object, contains regex' },
+    { 'obj6': 'Sixth object, contains regex' },
   ];
   
   const expected = [
@@ -386,7 +379,6 @@ test('(10 pts) (scenario) all.mr:strmatch', (done) => {
   // Test for this scenario
   const doMapReduce = (cb) => {
     distribution.strmatch.store.get(null, (e, v) => {
-      console.log("FROM GET: ", v);
       try {
         expect(v.length).toBe(dataset.length);
       } catch (e) {
@@ -406,15 +398,10 @@ test('(10 pts) (scenario) all.mr:strmatch', (done) => {
   let cntr = 0;
 
   // Send the dataset to the cluster
-  console.log(dataset)
   dataset.forEach((o) => {
     const key = Object.keys(o)[0];
     const value = o[key];
     distribution.strmatch.store.put(value, key, (e, v) => {
-      console.log("Put key: ", key);
-      console.log("Put value: ", value);
-      console.log("e: ", e);
-      console.log("v: ", v);
       cntr++;
       // Once the dataset is in place, run the map reduce
       if (cntr === dataset.length) {

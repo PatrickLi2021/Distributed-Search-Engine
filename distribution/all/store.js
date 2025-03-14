@@ -9,7 +9,18 @@ function store(config) {
 
   return {
     get: (configuration, callback) => {
-      console.log("INSIDE STORE GET ALL");
+      if (configuration === null) {
+        const remote = {service: "store", method: "get"};
+        const message = [{key: null, gid: context.gid}];
+        global.distribution[context.gid].comm.send(message, remote, (e, v) => {
+          let keys = [];
+          for (let val of Object.values(v)) {
+            keys = [...keys, ...val];
+          }
+          callback(e, keys);
+          return;
+        });
+      } else {
       // Convert primary key to key identifier (KID) by applying SHA256 on the primary key
       const kid = id.getID(configuration);
 
@@ -48,9 +59,10 @@ function store(config) {
           }
         });
       });
-    },
-
-    put: (state, configuration, callback) => {
+    }
+  },    
+    
+  put: (state, configuration, callback) => {
       // Hash the primary key to get the KID
       let kid = "";
       if (configuration !== null) {

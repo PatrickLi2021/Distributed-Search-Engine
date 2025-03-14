@@ -21,7 +21,9 @@ var getDirectories = function (dirPath, callback) {
 * - configuration: The string key we want to be associated with this object
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
-function put(state, configuration, callback) {  
+function put(state, configuration, callback) { 
+  console.log("IN STORE PUT, state: ", state);
+  console.log("IN STORE PUT, configuration: ", configuration); 
   let filename = "";
   let group = "";
   let directory = id.getNID(global.nodeConfig);
@@ -50,6 +52,7 @@ function put(state, configuration, callback) {
     filename = configuration.key;
   }
   const dirPath = path.join(process.cwd(), group + '/' + directory);
+  console.log("In store put, dirPath: ", dirPath);
 
   // Ensure the directory exists before writing the file
   try {
@@ -84,16 +87,13 @@ function get(configuration, callback) {
     configuration = configuration.key;
   }
 
-    // Get the directory based on NID
-    const directory = id.getNID(global.nodeConfig);
-    let dirPath = path.join(process.cwd(), group + '/' + directory);
+  // Get the directory based on NID
+  const directory = id.getNID(global.nodeConfig);
+  let dirPath = path.join(process.cwd(), group + '/' + directory);
 
   // Handle null case
   if (configuration === null) {
-    console.log("\n");
-    console.log("in store get null case");
-    console.log("\n");
-    dirPath = path.join(process.cwd(), group + '/');
+    dirPath = path.join(process.cwd(), group + '/' + id.getNID(global.nodeConfig));
     getDirectories(dirPath, function (err, res) {
       if (err) {
         callback(null, err);
@@ -154,7 +154,6 @@ function del(configuration, callback) {
       }
       return;
     }
-
     // Deserialize the object before deleting
     const deletedObj = deserialize(data);
 

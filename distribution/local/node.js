@@ -53,7 +53,6 @@ const start = function(callback) {
             functionToCall(...jsonData, (error, value) => {
               res.end(serialize([error, value]));
             });
-
           } else {
             res.statusCode = 404;
             res.end(serialize([new Error('Service or method not found'), null]));

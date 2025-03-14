@@ -8,6 +8,7 @@ serviceMap.set('status', {});
 serviceMap.set('routes', {});
 serviceMap.set('comm', {});
 serviceMap.set('rpc', global.moreStatus.toLocal);
+serviceMap.set('mr', {'mr': mr});
 serviceMap.set('all', {'status': status, 'routes': routes, 'comm': comm, 'gossip': gossip, 'mem': mem, 'store': store, 'mr': mr, 'groups': groups});
 
 
@@ -28,8 +29,10 @@ function get(configuration, callback) {
   if (serviceMap.has(service) && gid === 'local') {
     return callback(null, serviceMap.get(service));
     // Distributed service
+
   } else if (gid != 'local') {
     return callback(null, serviceMap.get('all')[service](configuration));
+
   } else {
     // Handling RPC calls
     if (!(service in serviceMap)) {
