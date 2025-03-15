@@ -14,7 +14,6 @@ var getDirectories = function (dirPath, callback) {
   glob(dirPath + '/**/*', callback);
 };
 
-
 /*
 * Parameters:
 * - state: The JS object that we want to put inside our store
@@ -126,6 +125,39 @@ function get(configuration, callback) {
 
 /*
 * Parameters:
+* - state: The JS object that we want to put inside our store
+* - configuration: The string key that we want to get
+* - callback: callback function, provide target object as a value to the corresponding continuation
+*/
+function append(state, configuration, callback) {
+  console.log('\n');
+  console.log('\n');
+  console.log('\n');
+  console.log("APPEND LOCAL CONFIG: ", configuration);
+  console.log("APPEND LOCAL STATE: ", state);
+  console.log('\n');
+  console.log('\n');
+  console.log('\n');
+  const appendVals = [];
+  get(configuration, (e, retrievedObj) => {
+    if (e) {
+      retrievedObj = [];
+    }
+    retrievedObj.push(state);
+    put(retrievedObj, configuration, (e, v) => {
+      console.log('\n');
+      console.log("OBJECT PUT DONE: ", v);
+      console.log('\n');
+      if (e) {
+        callback(new Error("error putting appended val"), null);
+      }
+      callback(null, appendVals);
+    });
+  });
+}
+
+/*
+* Parameters:
 * - configuration: The string key of the object we want to delete from our map
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
@@ -174,4 +206,4 @@ function del(configuration, callback) {
   });
 }
 
-module.exports = {put, get, del};
+module.exports = {put, get, del, append};

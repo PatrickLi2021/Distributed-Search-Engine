@@ -62,6 +62,47 @@ function store(config) {
     }
   },    
     
+  append: (state, configuration, callback) => {
+    // Hash the primary key to get the KID
+    let kid = "";
+    if (configuration !== null) {
+      kid = id.getID(configuration)
+    } else {
+      kid = id.getID(id.getID(state));
+    }
+
+    // Get the list of NIDs
+    global.distribution.local.groups.get(context.gid, (e, v) => {
+      if (e) {
+        callback(new Error("Could not get nodes"), null);
+        return;
+      }
+      const nids = Object.values(v).map(node => id.getNID(node));
+      
+      // Run the hashing algorithm on the KID and the NIDs
+      const nodeID = context.hash(kid, nids);
+      const nodeToStoreOn = Object.values(v).find(node => id.getNID(node) === nodeID);
+
+      // Normalize configuration
+      configuration = {gid: configuration.gid || context.gid, key: configuration, node: nodeToStoreOn };
+
+      // Call local.comm.send to invoke append on that node
+      const remote = {node: nodeToStoreOn, service: 'store', method: 'append'};
+      console.log('\n');
+      console.log("ALL APPEND config: ", configuration);
+      console.log("ALL APPEND state: ", state);
+      console.log('\n');
+      global.distribution.local.comm.send([state, configuration], remote, (e, v) => {
+        if (e) {
+          callback(new Error("Could not put object on node"), null);
+          return;
+        }
+        callback(null, v);
+      });
+      });
+  },
+
+
   put: (state, configuration, callback) => {
       // Hash the primary key to get the KID
       let kid = "";
