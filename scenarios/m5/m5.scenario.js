@@ -20,7 +20,7 @@ const n1 = {ip: '127.0.0.1', port: 7110};
 const n2 = {ip: '127.0.0.1', port: 7111};
 const n3 = {ip: '127.0.0.1', port: 7112};
 
-test.only('(0 pts) (scenario) all.mr:ncdc', (done) => {
+test('(0 pts) (scenario) all.mr:ncdc', (done) => {
 /* Implement the map and reduce functions.
    The map function should parse the string value and return an object with the year as the key and the temperature as the value.
    The reduce function should return the maximum temperature for each year.
@@ -53,7 +53,6 @@ test.only('(0 pts) (scenario) all.mr:ncdc', (done) => {
 
   const doMapReduce = (cb) => {
     distribution.ncdc.store.get(null, (e, v) => {
-      console.log("SCENARIO v: ", v);
       try {
         expect(v.length).toBe(dataset.length);
       } catch (e) {

@@ -49,29 +49,52 @@ function mr(config) {
     let shufflersDone = 0;
     let reducersDone = 0;
     let mapResults = [];
+    let reduceResults = [];
     let nodesWithConfig = new Set();
+
+    // Initialize shuffle function in config
+    configuration['shuffle'] = (mapRes) => {
+      let valuesToShuffle = 0;
+      for (const [key, value] of Object.entries(mapRes)) {
+        // Use store.all.put to put key + value on appropriate node (AKA shuffle this key)
+        global.distribution[configuration['gid']].store.put(value, key, (e, v) => {
+          valuesToShuffle++;
+          if (valuesToShuffle === Object.keys(mapRes).length) {
+            // Notify orchestrator that this node is done with shuffling
+            const remote = {node: configuration['execNode'], service: jobID, method: 'notify'};
+            global.distribution.local.comm.send([[], jobID, 'shuffle'], remote, (e, v) => {
+              if (e) {
+                callback(new Error("Error sending notify for shuffle"), null);
+              }
+              callback(null, v);
+            });
+          }
+        });
+      };
+    };  
 
     // Initialize map() wrapper in configuration
     configuration['mapWrapper'] = (configuration, jobID, callback) => {
       const originalMapFunc = configuration['map'];
-      // Count how many keys exist on this node that are in the current MR workflow
+      // Get the number of keys that exist on this node
       const getConfig = {key: null, gid: configuration['gid']};
       global.distribution.local.store.get(getConfig, (e, v) => {
         const numKeys = v.length;
-        // Iterate over each key in this MR workflow ...
+        // Iterate over each key on this node
         const mapRes = [];
         v.forEach(key => {
           const remote = {node: global.nodeConfig, service: 'store', method: 'get'};
           const getConfig = {key: key, gid: configuration['gid']};
+          // Retrieve the value associated with the given key
           global.distribution.local.comm.send([getConfig], remote, (e, v) => {
             if (v) {
-              // and call map() on this key-value pair
+              // Call map on this key-value pair
               mapRes.push(originalMapFunc(key, v));
             }
             if (mapRes.length == numKeys) {
               // Notify orchestrator that this node is done with its MapReduce
               const remote = {node: configuration['execNode'], service: jobID, method: 'notify'};
-              global.distribution.local.comm.send([mapRes, jobID], remote, (e, v) => {
+              global.distribution.local.comm.send([mapRes, jobID, 'map'], remote, (e, v) => {
                 if (e) {
                   callback(new Error("Error sending notify for map"), null);
                 }
@@ -83,35 +106,99 @@ function mr(config) {
       });
     }
 
-    configuration['reduceWrapper'] = (mapRes, cb) => {
+    configuration['reduceWrapper'] = (cb) => {
       const originalReduceFunc = configuration['reduce'];
-      const grouped = mapRes.reduce((acc, obj) => {
-        const key = Object.keys(obj)[0]; 
-        acc[key] = (acc[key] || []).concat(obj[key]);
-        return acc;
-      }, {});
-      const reduceResult = [];
-      for (const [key, values] of Object.entries(grouped)) {
-        reduceResult.push(originalReduceFunc(key, values));
-      }
-      cb(null, reduceResult);
-    };
+      const reduceValues = [];
+      const reduceRes = [];
+      global.distribution.local.store.get(null, (e, v) => {
+        const numKeys = v.length;
+        // For each key on this node, get the value associated with this key
+        v.forEach(key => {
+          const remote = {node: global.nodeConfig, service: 'store', method: 'get'};
+          const getConfig = {key: key, gid: configuration['gid']};
+          // Retrieve the value associated with the given key
+          global.distribution.local.comm.send([getConfig], remote, (e, v) => {
+            reduceValues.push(v);
+            if (reduceValues.length === numKeys) {
+              const grouped = reduceValues.reduce((acc, obj) => {
+                const key = Object.keys(obj)[0]; 
+                acc[key] = (acc[key] || []).concat(obj[key]);
+                return acc;
+              }, {});
+              for (const [key, values] of Object.entries(grouped)) {
+                reduceRes.push(originalReduceFunc(key, values));
+              }
+              // Notify orchestrator that this node is done with its reduce job
+              const remote = {node: configuration['execNode'], service: jobID, method: 'notify'};
+              global.distribution.local.comm.send([reduceRes, jobID, 'reduce'], remote, (e, v) => {
+                if (e) {
+                  callback(new Error("Error sending notify for map"), null);
+                }
+                callback(null, v);
+              });
+            }
+          });
+        });
+      });
+      };
     
     // Initialize notify in configuration
-    configuration['notify'] = (mapRes, jobID, cb) => {
-      mapResults.push(mapRes);
-      mappersDone++;
-      global.distribution.local.groups.get(context.gid, (e, v) => {
-        if (mappersDone === nodesWithConfig.size) {
-          mapResults = mapResults.flat(Infinity);
-          // SKIP SHUFFLE PHASE FOR NOW AND JUST IMPLEMENT SINGLE REDUCER
-          // Trigger the reducer function to run on the orchestrator
-          const remote = {node: configuration['execNode'], service: jobID, method: 'reduceWrapper'};
-          global.distribution.local.comm.send([mapResults], remote, (e, v) => {
-            cb(null, v);
-          });
+    configuration['notify'] = (partialRes, phase, jobID, cb) => {
+      if (phase === 'map') {
+        // Update the cumulative map result and increment the number of worker nodes that are done with map
+        mapResults.push(partialRes);
+        mappersDone++;
+        global.distribution.local.groups.get(context.gid, (e, v) => {
+          if (mappersDone === nodesWithConfig.size) {
+            mapResults = mapResults.flat(Infinity);
+            
+            // Go through all nodes in this group. If they have keys to shuffle, then call shuffle on that node
+            for (const [_, node] of Object.entries(v)) {
+              if (nodesWithConfig.has(id.getNID(node))) {
+                const remote = {node: value, service: jobID, method: 'shuffle'};
+                global.distribution.local.comm.send([partialRes], remote, (e, v) => {
+                  if (e) {
+                    cb(new Error("Error with shuffle on node", null));
+                    return;
+                  }
+                  cb(null, v);
+                });
+              }
+            }
+          }
+        });
+      }
+      else if (phase === 'shuffle') {
+        // shuffle phase
+        shufflersDone++;
+        global.distribution.local.groups.get(context.gid, (e, v) => {
+        if (shufflersDone === nodesWithConfig.size) {
+            // Go through all nodes in this group. If they have keys to reduce, then call reduce on that node
+            for (const [_, node] of Object.entries(v)) {
+              if (nodesWithConfig.has(id.getNID(node))) {
+                const remote = {node: value, service: jobID, method: 'reduceWrapper'};
+                global.distribution.local.comm.send([], remote, (e, v) => {
+                  if (e) {
+                    cb(new Error("Error with reduce on node", null));
+                    return;
+                  }
+                  cb(null, v);
+                });
+              }
+            }
         }
       });
+      }
+      else {
+        reducersDone++;
+        reduceResults.push(partialRes);
+        global.distribution.local.groups.get(context.gid, (e, v) => {
+          if (reducersDone === nodesWithConfig.size) {
+            // Return final reduced output
+            cb(null, reduceResults);
+          }
+        });
+      }
     };
 
     // Initialize other parameters in configuration
@@ -127,7 +214,7 @@ function mr(config) {
       keys.forEach(key => {
         const kid = id.getID(key);
 
-        // Find the node to retrieve the object on
+        // Retrieve all nodes in the orchestrator's view of the group
         global.distribution.local.groups.get(context.gid, (e, v) => {
           if (e) {
             callback(new Error("Could not get nodes"), null);
@@ -140,15 +227,16 @@ function mr(config) {
           const nodeToPut = Object.values(v).find(node => id.getNID(node) === nodeID);
 
           if (!nodesWithConfig.has(id.getNID(nodeToPut))) {
-            // Register mr workflow on each worker node in this group
+            // Register mr workflow on the worker node possessing the key
             const remote = {node: nodeToPut, service: 'routes', method: 'put'};
             global.distribution.local.comm.send([configuration, jobID], remote, (e, v) => {
+              // Add nodeToPut's NID to the set so that we don't put the config (and execute map) twice on this node
               nodesWithConfig.add(id.getNID(nodeToPut));
               if (e) {
                 cb(new Error("Could not send mr config to node"), null);
                 return;
               }
-              // ... and have worker node start executing map()
+              // Have worker node start executing map()
               const remote = {node: nodeToPut, service: jobID, method: 'mapWrapper'};
               global.distribution.local.comm.send([configuration, jobID], remote, (e, v) => {
                 cb(null, v);
