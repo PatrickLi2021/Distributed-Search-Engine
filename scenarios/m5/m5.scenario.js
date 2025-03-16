@@ -170,19 +170,7 @@ test('(10 pts) (scenario) all.mr:tfidf', (done) => {
     Implement the map and reduce functions.
     The map function should parse the string value and return an object with the word as the key and the document and count as the value.
     The reduce function should return the TF-IDF for each word.
-
-    Hint:
-    TF = (Number of times the term appears in a document) / (Total number of terms in the document)
-    IDF = log10(Total number of documents / Number of documents with the term in it)
-    TF-IDF = TF * IDF
 */
-
-  const mapper = (key, value) => {
-  };
-
-  // Reduce function: calculate TF-IDF for each word
-  const reducer = (key, values) => {
-  };
 
 const dataset = [
   {'doc1': 'machine learning is amazing'},
@@ -190,15 +178,58 @@ const dataset = [
   {'doc3': 'machine learning and deep learning are related'},
 ];
 
-  const expected = [{'is': {'doc1': 0.12}},
-    {'deep': {'doc2': 0.04, 'doc3': 0.03}},
-    {'systems': {'doc2': 0.1}},
-    {'learning': {'doc1': 0, 'doc2': 0, 'doc3': 0}},
-    {'amazing': {'doc1': 0.04, 'doc2': 0.04}},
-    {'machine': {'doc1': 0.04, 'doc3': 0.03}},
-    {'are': {'doc3': 0.07}}, {'powers': {'doc2': 0.1}},
-    {'and': {'doc3': 0.07}}, {'related': {'doc3': 0.07}}];
+const expected = [
+  {'machine': {'doc1': '0.0440', 'doc3': '0.0252'}},
+  {'learning': {'doc1': '0.0000', 'doc2': '0.0000', 'doc3': '0.0000'}},
+  {'is': {'doc1': '0.1193'}},
+  {'amazing': {'doc1': '0.0440', 'doc2': '0.0352'}},
+  {'deep': {'doc2': '0.0352', 'doc3': '0.0252'}},
+  {'powers': {'doc2': '0.0954'}},
+  {'systems': {'doc2': '0.0954'}},
+  {'and': {'doc3': '0.0682'}},
+  {'are': {'doc3': '0.0682'}},
+  {'related': {'doc3': '0.0682'}},
+];
 
+const mapper = (key, value) => {
+  const words = value.split(" ");
+  let counts = {}; 
+  let res = [];
+  words.forEach(word => {
+    counts[word] = (counts[word] || 0) + 1;
+  });
+  const seenWords = new Set();
+  words.forEach(word => {
+    if (!seenWords.has(word)) {
+      seenWords.add(word);
+      res.push({ [word]: { [key]: counts[word] / words.length }});
+    }
+  });
+  return res;
+};
+
+
+  // Reduce function: calculate TF-IDF for each word
+  const reducer = (key, values) => {
+    let res = [];
+    const idf = Math.log10(3 / values.length);
+    values.forEach(val => {
+      const [[docID, tf]] = Object.entries(val);
+      const tfidf = tf * idf;
+      const existingEntry = res.find(entry => entry[key]);
+      if (!existingEntry) {
+        res.push({
+          [key]: {
+            [docID]: tfidf.toFixed(4)
+          }
+        });
+      } else {
+        existingEntry[key][docID] = tfidf.toFixed(4);
+      }
+    });
+    return res;
+  };
+  
   const doMapReduce = (cb) => {
     distribution.tfidf.store.get(null, (e, v) => {
       try {
@@ -241,9 +272,9 @@ const dataset = [
   - Run the map reduce.
 */
 
-test('(10 pts) (scenario) all.mr:crawl', (done) => {
-    done(new Error('Implement this test.'));
-});
+// test('(10 pts) (scenario) all.mr:crawl', (done) => {
+//     done(new Error('Implement this test.'));
+// });
 
 test('(10 pts) (scenario) all.mr:urlxtr', (done) => {
   const mapper = (key, value) => {
@@ -448,9 +479,9 @@ test('(10 pts) (scenario) all.mr:ridx', (done) => {
   });
 });
 
-test('(10 pts) (scenario) all.mr:rlg', (done) => {
-    done(new Error('Implement the map and reduce functions'));
-});
+// test('(10 pts) (scenario) all.mr:rlg', (done) => {
+//     done(new Error('Implement the map and reduce functions'));
+// });
 
 /*
     This is the setup for the test scenario.
@@ -554,5 +585,3 @@ afterAll((done) => {
     });
   });
 });
-
-
