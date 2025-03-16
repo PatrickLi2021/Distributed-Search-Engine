@@ -145,6 +145,7 @@ function append(state, configuration, callback) {
     }
     retrievedObj.push(state);
     put(retrievedObj, configuration, (e, v) => {
+
       console.log('\n');
       console.log("OBJECT PUT DONE: ", v);
       console.log('\n');

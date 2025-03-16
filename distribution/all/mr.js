@@ -47,22 +47,21 @@ function mr(config) {
     // Initialize counter and aggregate variables to be used in the various phases
     let mappersDone = 0;
     let shufflersDone = 0;
+    let totalDone = 0;
     let reducersDone = 0;
     let mapResults = [];
-    let nodesWithConfig = new Set();
 
     // Initialize GID and node config for the orchestrator node in the MR workflow
     configuration['gid'] = context.gid;
     configuration['execNode'] = global.nodeConfig;
 
     // Initialize map() wrapper in configuration
-    configuration['mapWrapper'] = (configuration, jobID, callback) => {
+    configuration['mapWrapper'] = (configuration, jobID, mapCallback) => {
       const originalMapFunc = configuration['map'];
       // Count how many keys exist on this node that are in the current MR workflow
       const getConfig = {key: null, gid: configuration['gid']};
       global.distribution.local.store.get(getConfig, (e, v) => {
         const numKeys = v.length;
-
         // Iterate over each key in this MR workflow ...
         const mapRes = [];
         v.forEach(key => {
@@ -70,24 +69,37 @@ function mr(config) {
           global.distribution.local.store.get(getConfig, (e, v) => {
             if (v) {
               // and call map() on this key-value pair (and flatten returned array)
-              mapRes.push(...originalMapFunc(key, v));
+              mapRes.push(originalMapFunc(key, v));
             }
             if (mapRes.length == numKeys) {
               // Notify orchestrator that this node is done with its MapReduce
               const remote = {node: configuration['execNode'], service: jobID, method: 'notify'};
               global.distribution.local.comm.send([mapRes, jobID], remote, (e, v) => {
                 if (e) {
-                  callback(new Error("Error sending notify for map"), null);
+                  mapCallback(new Error("Error sending notify for map"), null);
                 }
-                callback(null, v);
+                mapCallback(null, v);
+                return;
               });
             }
           });
         });
+        if (v.length === 0) {
+          // If this node was in the group but had no keys put on it, we still want to call notify, just with an empty
+          // intermediate map result (because it had no keys to work with)
+          const remote = {node: configuration['execNode'], service: jobID, method: 'notify'};
+          global.distribution.local.comm.send([mapRes, jobID], remote, (e, v) => {
+            if (e) {
+              mapCallback(new Error("Error sending notify for map"), null);
+            }
+            mapCallback(null, v);
+            return;
+          });
+        }
       });
     }
 
-    configuration['reduceWrapper'] = (mapRes, cb) => {
+    configuration['reduceWrapper'] = (mapRes, reduceCallback) => {
       const originalReduceFunc = configuration['reduce'];
       const grouped = mapRes.reduce((acc, obj) => {
         const key = Object.keys(obj)[0]; 
@@ -98,7 +110,8 @@ function mr(config) {
       for (const [key, values] of Object.entries(grouped)) {
         reduceResult.push(originalReduceFunc(key, values));
       }
-      cb(null, reduceResult);
+      reducersDone++;
+      reduceCallback(null, reduceResult);
     };
     
     // Initialize notify in configuration
@@ -110,7 +123,6 @@ function mr(config) {
           mapResults = mapResults.flat(Infinity);
           // SKIP SHUFFLE PHASE FOR NOW AND JUST IMPLEMENT SINGLE REDUCER
           // Trigger the reducer function to run on the orchestrator
-          console.log("MAP RESULTS: ", mapResults, global.nodeConfig.port);
           const remote = {node: configuration['execNode'], service: jobID, method: 'reduceWrapper'};
           global.distribution.local.comm.send([mapResults], remote, (e, v) => {
             if (e) {
@@ -139,11 +151,14 @@ function mr(config) {
             // Have each worker node start executing map
             const remote = {node: node, service: jobID, method: 'mapWrapper'};
             global.distribution.local.comm.send([configuration, jobID], remote, (e, v) => {
-              if (e) {
-                execCallback(new Error("Error with worker node executing map"), null);
-                return;
-              }
-              execCallback(null, v);
+              if (totalDone == 0) {
+                totalDone++;
+                if (e) {
+                  execCallback(new Error("Error with worker node executing map"), null);
+                  return;
+                }
+                execCallback(null, v);
+             }
             });
           } 
         });
