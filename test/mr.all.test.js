@@ -51,6 +51,7 @@ test.only('(25 pts) all.mr:ncdc', (done) => {
       distribution.ncdc.mr.exec({keys: v, map: mapper, reduce: reducer}, (e, v) => {
         try {
           expect(v).toEqual(expect.arrayContaining(expected));
+          expect(1).toEqual(1);
           done();
         } catch (e) {
           done(e);
