@@ -61,14 +61,12 @@ function put(state, configuration, callback) {
   // Define the file path inside the directory
   const filePath = path.join(dirPath, `${filename}.json`);
 
-  // Write the serialized object to the file
-  fs.writeFile(filePath, serialize(state), 'utf8', (err) => {
-    if (err) {
-      callback(new Error(`Error writing object to file: ${err.message}`), null);
-      return;
-    }
+  try {
+    fs.writeFileSync(filePath, serialize(state), 'utf8');
     callback(null, state);
-  });
+  } catch (err) {
+    callback(new Error(`Error writing object to file: ${err.message}`), null);
+  }
 }
 
 /*
@@ -106,21 +104,17 @@ function get(configuration, callback) {
   const filePath = path.join(dirPath, `${configuration}.json`);
 
   // Read the file to retrieve the object
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) {
-      if (err.code === 'ENOENT') {
-        callback(new Error(`No data found for key: ${configuration}`), null);
-        return;
-      } else {
-        callback(new Error("Error reading the file"), null);
-        return;
-      }
-    }
-    // Deserialize the object
+  try {
+    const data = fs.readFileSync(filePath, 'utf8');
     const deserializedObj = deserialize(data);
     callback(null, deserializedObj);
-    return;
-  });
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      callback(new Error(`No data found for key: ${configuration}`), null);
+    } else {
+      callback(new Error("Error reading the file"), null);
+    }
+  }
 }
 
 /*
@@ -130,29 +124,17 @@ function get(configuration, callback) {
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
 function append(state, configuration, callback) {
-  console.log('\n');
-  console.log('\n');
-  console.log('\n');
-  console.log("APPEND LOCAL CONFIG: ", configuration);
-  console.log("APPEND LOCAL STATE: ", state);
-  console.log('\n');
-  console.log('\n');
-  console.log('\n');
-  const appendVals = [];
   get(configuration, (e, retrievedObj) => {
-    if (e) {
+    if (retrievedObj === null && e) {
       retrievedObj = [];
     }
     retrievedObj.push(state);
     put(retrievedObj, configuration, (e, v) => {
-
-      console.log('\n');
-      console.log("OBJECT PUT DONE: ", v);
-      console.log('\n');
       if (e) {
         callback(new Error("error putting appended val"), null);
+        return;
       }
-      callback(null, appendVals);
+      callback(null, v);
     });
   });
 }
@@ -174,37 +156,34 @@ function del(configuration, callback) {
   const dirPath = path.join(process.cwd(), group + "/" + directory); // NID-based directory
   const filePath = path.join(dirPath, `${configuration}.json`);
 
-  // Read the file to retrieve the stored object before deletion
-  fs.readFile(filePath, 'utf8', (err, data) => {
-    if (err) {
-      if (err.code === 'ENOENT') {
-        callback(new Error(`No data found for key: ${configuration}`), null);
-      } else {
-        callback(new Error("Error reading the file"), null);
-      }
-      return;
-    }
-    // Deserialize the object before deleting
+  try {
+    // Read the file synchronously to retrieve the stored object before deletion
+    const data = fs.readFileSync(filePath, 'utf8'); 
     const deletedObj = deserialize(data);
 
-    // Delete the file
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        callback(new Error("Error deleting the file"), null);
-        return;
+    // Delete the file synchronously
+    fs.unlinkSync(filePath);
+
+    // Check if directory is empty and remove it synchronously if needed
+    try {
+      const files = fs.readdirSync(dirPath);
+      if (files.length === 0) {
+        fs.rmdirSync(dirPath);
       }
+    } catch (err) {
+      // Ignore errors related to directory removal
+    }
 
-      // Check if directory is empty and remove it if needed
-      fs.readdir(dirPath, (err, files) => {
-        if (!err && files.length === 0) {
-          fs.rmdir(dirPath, () => {}); // Silently attempt to remove the directory
-        }
-      });
-
-      // Return the deleted object
-      callback(null, deletedObj);
-    });
-  });
+    // Return the deleted object
+    callback(null, deletedObj);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      callback(new Error(`No data found for key: ${configuration}`), null);
+    } else {
+      callback(new Error("Error processing the file"), null);
+    }
+  }
 }
+
 
 module.exports = {put, get, del, append};

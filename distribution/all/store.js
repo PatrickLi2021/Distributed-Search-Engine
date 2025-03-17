@@ -62,7 +62,7 @@ function store(config) {
     }
   },    
     
-  append: (state, configuration, callback) => {
+  append: (state, configuration, callback) => {    
     // Hash the primary key to get the KID
     let kid = "";
     if (configuration !== null) {
@@ -88,10 +88,10 @@ function store(config) {
 
       // Call local.comm.send to invoke append on that node
       const remote = {node: nodeToStoreOn, service: 'store', method: 'append'};
-      console.log('\n');
-      console.log("ALL APPEND config: ", configuration);
-      console.log("ALL APPEND state: ", state);
-      console.log('\n');
+      // console.log('\n');
+      // console.log("CONFIGURATION: ", configuration);
+      // console.log("STATE: ", state);
+      // console.log('\n');
       global.distribution.local.comm.send([state, configuration], remote, (e, v) => {
         if (e) {
           callback(new Error("Could not put object on node"), null);
