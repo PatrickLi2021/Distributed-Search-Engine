@@ -232,19 +232,37 @@ By determining the keys in advance, the system can avoid redundant lookups and m
 ## M5: Distributed Execution Engine
 
 ### Summary of Implementation
+For this project, I created a distributed processing program that executes MapReduce for a given workflow across several nodes. It orchestrates the parallel execution of `map` and `reduce` functions to process large datasets efficiently. This entire process consists of 3 major phases: mapping, shuffling, and reducing. The `exec` function dynamically installs methods on remote nodes to help them achieve this functionality.
+
+1. Initialization
+In `mr.js`, the `mr` function sets up the MapReduce framework, establishing the execution context using a `gid` and hash function to be used later in the shuffling phase. The only method exposed in `mr` is `exec`, which initiates the workflow by distributing the MapReduce workflow configuration object among worker nodes. The function also initializes counters to track the progress of the MapReduce stages. It also configures an orchestrator node which is responsible for coordinating the execution across these worker nodes.
+
+2. Mapping Phase
+During the map phase, the framework lets each worker node process the key-value pairs that it has locally (stored before the MapReduce execution began). The `mapWrapper` function retrieves all keys available on the node, applies the mapper function to each key-value pair, and stores the intermediate results in a reduce group (this new `reduceGroup` is created for the shuffling phase, so as to not interfere with the keys that were originally placed on the worker nodes). Each map worker processes its assigned data independently, generating key-value outputs that are shuffled to the appropriate reducers. If a node has no data, it still sends a notification to signal completion. Once all mappers complete, the system aggregates the results and moves to the shuffle phase.
+
+3. Shuffling Phase
+The shuffling phase is responsible for redistributing intermediate data to nodes responsible for reducing them. It ensures that all values associated with the same key are grouped together before reducing. 
+
+4. Reducing Phase
+In the reduce phase, the system retrieves the intermediate key-value pairs from the reduce group. The `reduceWrapper` function collects values corresponding to each key and applies the reducer function to aggregate results. Each worker node processes its assigned data, and once all reducers finish, their results are aggregated and returned to the orchestrator node.
+
+5. Completion and Result Collection
+Once the reduction step completes, the final output is sent back to the orchestrator. The framework ensures that all reduce workers complete execution before finalizing the output. The results are then returned to the user, completing the distributed computation.
+
+Note that the `notify` function is used to aggregates mapped/shuffled results and is used to call the `reducerWrapper` once those phase(s) are done.
 
 ### Key Challenges
+I think the key challenge for me when implementing this milestone was not as much understanding how MapReduce worked, but understanding how to design the different components of the workflow (i.e. map, shuffle, reduce) and understanding how the different phases and worker nodes would communicate with the orchestrator node. Additionally, I was a little confused about where to initially place the code and what the different steps of designing and coding the `exec` function would entail.
 
-#### Lab Portion
+#### Lab Portion and Extra Features
+For the lab portion, I implemented the following components; compation, distributed persistence, in-memory operation, and iterative MapReduce. 
 
 ### Correctness & Performance Characterization
 
 #### Correctness
+In order to characterize correctness for this milestone, I implemented 5 tests in the `m5.student.test.js` file that tested my distributed MapReduce implementation on a variety of workflows, dataset, and individual implementations of `map` and `reduce`. The first test verifies that the system can extract numerical values from structured text and find the maximum value associated with each key. The second test ensures that the framework can correctly aggregate sales data across different categories, testing both numerical computations and key grouping. The third test computes average ratings for different items, checking if the program properly partitions data by category and calculates the right averages. The fourth test involves summing sales across multiple stores, introducing a more extensive dataset to test performance and scalability. The final test is an edge case, examining how the system behaves with an empty dataset, ensuring that it handles the absence of input data gracefully without errors.
 
 #### Performance
-
-### Key Feature
-
-
+In order to characterize the performance of my MapReduce implementation, I ran MapReduce 100 times on the NCDC dataset. The execution time for all 100 iterations is recorded using the `Date.now()` module in Node.js, and from this, the average throughput for this worklow is 70.6714 jobs/second and the average latency is 0.01415 seconds/job.
 
 > ...

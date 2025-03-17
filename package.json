@@ -25,22 +25,135 @@
         "yargs": "^17.7.2",
         "@brown-ds/distribution": "latest"
     },
-    "report": {
-        "hours": 999,
-        "loc": 999,
+    "reportM0": {
+        "hours": 20,
+        "sloc": 231,
+        "jsloc": 314,
         "dev": {
-            "cpu-no": 999,
-            "mem-gb": 999,
-            "ssd-gb": 999
+            "cpu-no": 10,
+            "mem-gb": 8.02,
+            "ssd-gb": 59
+        },
+        "throughput": {
+            "dev": [
+                "Crawl: 2.92 ms/URL",
+                "Index: 0.0432 ms/word",
+                "Query: 372.09 ms/word queried"
+            ],
+            "aws": [
+                "Crawl: 2.76 ms/URL",
+                "Index: 0.1036 ms/word",
+                "Query: 1186.165 ms/word queried"
+            ],
+            "gs": []
+        },
+        "dloc": 1300
+    },
+    "reportM1": {
+        "hours": 8,
+        "loc": 80,
+        "dev": {
+            "cpu-no": 10,
+            "mem-gb": 8.02,
+            "ssd-gb": 59
         },
         "throughput": {
             "dev": [],
             "aws": []
         },
         "latency": {
-            "dev": [],
-            "aws": []
+            "dev": [
+                "Base Structures: 0.03095 ms/operation",
+                "Functions: 4.3730 ms/operation",
+                "Complex, Recursive Structures: 0.0949 ms/operation"
+            ],
+            "aws": [
+                "Base Structures: 0.0417 ms/operation",
+                "Functions: 5.2312 ms/operation",
+                "Complex, Recursive Structures: 0.1034 ms/operation"
+            ]
         },
         "dloc": -99
+    },
+    "reportM2": {
+        "hours": 14,
+        "loc": 284,
+        "dev": {
+            "cpu-no": 10,
+            "mem-gb": 8.02,
+            "ssd-gb": 59
+        },
+        "throughput": {
+            "dev": [
+                "Comm: 228.206 operations/second",
+                "RPC: 53.50 operations/second"
+            ]
+        },
+        "latency": {
+            "dev": [
+                "Comm: 4.382 ms/operation",
+                "RPC: 18.69 ms/operation"
+            ]
+        },
+        "dloc": -99
+    },
+    "reportM3": {
+        "hours": 20,
+        "loc": 314,
+        "dev": {
+            "cpu-no": 10,
+            "mem-gb": 8.02,
+            "ssd-gb": 59
+        },
+        "throughput": {
+            "dev": [
+                "Launching Nodes: 8.3243 nodes/second"
+            ]
+        },
+        "latency": {
+            "dev": [
+                "Launching Nodes:  95.0853 ms/node launched"
+            ]
+        }
+    },
+    "reportM4": {
+        "hours": 15,
+        "loc": 325,
+        "dev": {
+            "cpu-no": 10,
+            "mem-gb": 8.02,
+            "ssd-gb": 59
+        },
+        "throughput": {
+            "aws": [
+                "Insertion: 10.391 insertions/second",
+                "Query: 214.706 queries/second"
+            ]
+        },
+        "latency": {
+            "aws": [
+                "Insertion: 96.2343 seconds/insertion",
+                "Query: 0.004657 seconds/query"
+            ]
+        }
+    },
+    "reportM5": {
+        "hours": 15,
+        "loc": 332,
+        "dev": {
+            "cpu-no": 10,
+            "mem-gb": 8.02,
+            "ssd-gb": 59
+        },
+        "throughput": {
+            "local": [
+                "70.6714 jobs/second"
+            ]
+        },
+        "latency": {
+            "local": [
+                "0.01415 seconds/job"
+            ]
+        }
     }
 }
