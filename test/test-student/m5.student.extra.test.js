@@ -150,8 +150,53 @@ test('(15 pts) add support for distributed persistence', (done) => {
     });
 });
 
-test('(5 pts) add support for optional in-memory operation', (done) => {
-    done(new Error('Not implemented'));
+test.only('(5 pts) add support for optional in-memory operation', (done) => {
+    const mapper = (key, value) => {
+        const words = value.split(/(\s+)/).filter((e) => e !== ' ');
+        const out = {};
+        out[words[1]] = parseInt(words[3]);
+        
+        return [out];
+      };
+    
+      const reducer = (key, values) => {
+        const out = {};
+        out[key] = values.reduce((a, b) => Math.max(a, b), -Infinity);
+        return out;
+      };
+    
+      const dataset = [
+        {'000': '006701199099999 1950 0515070049999999N9 +0000 1+9999'},
+        {'106': '004301199099999 1950 0515120049999999N9 +0022 1+9999'},
+        {'212': '004301199099999 1950 0515180049999999N9 -0011 1+9999'},
+        {'318': '004301265099999 1949 0324120040500001N9 +0111 1+9999'},
+        {'424': '004301265099999 1949 0324180040500001N9 +0078 1+9999'},
+      ];
+    
+      const expected = [{'1950': 22}, {'1949': 111}];
+    
+        const doMapReduce = (cb) => {
+        distribution.inMemGroup.mr.exec({keys: getDatasetKeys(dataset), map: mapper, reduce: reducer, out: 'out', memory: true}, (e, v) => {
+            try {
+            expect(v).toEqual(expect.arrayContaining(expected));
+            done();
+            } catch (e) {
+            done(e);
+            }
+        });
+        };
+
+        let cntr = 0;
+        dataset.forEach((o) => {
+        const key = Object.keys(o)[0];
+        const value = o[key];
+        distribution.inMemGroup.store.put(value, key, (e, v) => {
+            cntr++;
+            if (cntr === dataset.length) {
+                doMapReduce();
+            }
+        });
+    });
 });
 
 test('(15 pts) add support for iterative map-reduce', (done) => {

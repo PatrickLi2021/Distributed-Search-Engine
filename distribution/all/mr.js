@@ -55,6 +55,7 @@ function mr(config) {
 
     // Initialize map() wrapper in configuration
     configuration['mapWrapper'] = (configuration, jobID, mapCallback) => {
+      const inMem = configuration['memory'] ? 'mem' : 'store';
       const originalMapFunc = configuration['map'];
       const compactFunc = configuration['compact'];
       // Count how many keys exist on this worker node that are in the current MR workflow
@@ -78,15 +79,13 @@ function mr(config) {
               mapOutput.forEach((item) => {
                 const key = Object.keys(item)[0];
                 const value = Object.values(item)[0];
-        
                 global.distribution['reduceGroup'].store.append(value, key, (e, v) => {
                   mapOutputKeys++;
                   if (e) {
                     mapCallback(new Error("Issue appending key to new node"), null);
                     return;
                   }
-                  
-                  if (mapOutputKeys === mapOutput.length) {
+                  if (mapOutputKeys === mapOutput.length) { 
                     completedKeys++;
                     if (completedKeys === numKeys) { 
                       const remote = { node: configuration['execNode'], service: jobID, method: 'notify' };
@@ -119,6 +118,7 @@ function mr(config) {
     }
 
     configuration['reduceWrapper'] = (configuration, reduceCallback) => {
+      let inMem = configuration['memory'] ? 'mem' : 'store';
       const originalReduceFunc = configuration['reduce']; // Store the original, pure reduce function
       // Retrieve all the keys SOLELY USED FOR REDUCE on this node (from the reduceGroup)
       const getConfig = {key: null, gid: 'reduceGroup'};
@@ -137,8 +137,6 @@ function mr(config) {
             }
             reduceRes.push(originalReduceFunc(key, valueArr));
             if (numKeys === keysToReduce) {
-              // reduceCallback(null, reduceRes);
-
               // Once this worker node has its reduce result, we want to write it to the out group
               global.distribution[configuration['out']].store.put(reduceRes, key, (e, v) => {
                 if (e) {
@@ -161,6 +159,7 @@ function mr(config) {
     
     // Initialize notify in configuration
     configuration['notify'] = (mapRes, jobID, notifyCallback) => {
+      let inMem = configuration['memory'] ? 'mem' : 'store';
       mappersDone++; // Increment the number of mappers completed
       mapResults.push(mapRes); // Aggregate intermediate map result
       global.distribution.local.groups.get(configuration['gid'], (e, nodesInGroup) => {
@@ -195,7 +194,7 @@ function mr(config) {
                     reduceResults.forEach(key => {
                       global.distribution[configuration['out']].store.get(key, (e, val) => {
                         finalOutput.push(val);
-                        if (finalOutput.length === numKeys) {
+                        if (finalOutput.length === numKeys) { 
                           notifyCallback(null, finalOutput);
                         }
                       });

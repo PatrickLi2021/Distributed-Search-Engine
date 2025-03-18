@@ -95,9 +95,8 @@ function store(config) {
         }
         callback(null, v);
       });
-      });
+    });
   },
-
 
   put: (state, configuration, callback) => {
       // Hash the primary key to get the KID

@@ -1,4 +1,3 @@
-
 const localStore = new Map(); // { {gid: {key: object}, ...}, ...}
 const { local } = require('@brown-ds/distribution');
 const id = require('../util/id');
@@ -41,8 +40,27 @@ function put(state, configuration, callback) {
     callback(null, state);
 }
 
-
-
+/*
+* Parameters:
+* - state: The JS object that we want to append inside our store
+* - configuration: The string key that we want to get
+* - callback: callback function, provide target object as a value to the corresponding continuation
+*/
+function append(state, configuration, callback) {
+  get(configuration, (e, retrievedObj) => {
+    if (retrievedObj === null && e) {
+      retrievedObj = [];
+    }
+    retrievedObj.push(state);
+    put(retrievedObj, configuration, (e, v) => {
+      if (e) {
+        callback(new Error("error putting appended val"), null);
+        return;
+      }
+      callback(null, v);
+    });
+  });
+}
 
 
 /*
@@ -52,10 +70,22 @@ function put(state, configuration, callback) {
 */
 function get(configuration, callback) {
     if (configuration === null || configuration.key === null) {
-        let keys = [];
-        for (const [gid, subMap] of localStore) {
-            if (typeof subMap === "object") {
-                keys.push(...Object.keys(subMap)); 
+        if (configuration.gid) {
+            let keys = [];
+            for (const [gid, subMap] of localStore) {
+                if (gid === configuration['gid']) {
+                    keys.push(...Object.keys(subMap)); 
+                }
+            }
+            callback(null, keys);
+            return;
+        }
+        else {
+            let keys = [];
+            for (const [gid, subMap] of localStore) {
+                if (typeof subMap === "object") {
+                    keys.push(...Object.keys(subMap)); 
+                }
             }
         }
         callback(null, keys);
@@ -116,4 +146,4 @@ function del(configuration, callback) {
 }
 
 
-module.exports = {put, get, del};
+module.exports = {put, append, get, del};

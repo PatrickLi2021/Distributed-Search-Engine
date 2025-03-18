@@ -74,7 +74,7 @@ function mem(config) {
     * 
     * Note: The type of hashing technique used is stored in context.hash
     */
-    put: (state, configuration, callback) => {
+    put: (state, configuration, callback) => {  
       // distributed put always passes in object of key and gid
       // Hash the primary key to get the KID
       let kid = "";
@@ -83,14 +83,12 @@ function mem(config) {
       } else {
         kid = id.getID(id.getID(state));
       }
-      
       if (typeof configuration === 'string') {
         configuration = {gid: context.gid, key: configuration};
       }
       else if (configuration === null) {
         configuration = {gid: context.gid, key: id.getID(state)};
       }
-
       // Get the list of NIDs
       global.distribution.local.groups.get(context.gid, (e, v) => {
         if (e) {
@@ -114,6 +112,55 @@ function mem(config) {
         });
       });
     },
+
+    /*
+      * Parameters:
+      * - state: the object that we're trying to put into our mem store (the key will map to this)
+      * - configuration: a string representing the key used to retrieve the value
+      * - callback: function to call after executing put
+      * 
+      * Note: The type of hashing technique used is stored in context.hash
+    */
+    append: (state, configuration, callback) => {
+      // distributed put always passes in object of key and gid
+      // Hash the primary key to get the KID
+      let kid = "";
+      if (configuration !== null) {
+        kid = id.getID(configuration)
+      } else {
+        kid = id.getID(id.getID(state));
+      }
+      
+      if (typeof configuration === 'string') {
+        configuration = {gid: context.gid, key: configuration};
+      }
+      else if (configuration === null) {
+        configuration = {gid: context.gid, key: id.getID(state)};
+      }
+      // Get the list of NIDs
+      global.distribution.local.groups.get(context.gid, (e, v) => {
+        if (e) {
+          callback(new Error("Could not get nodes"), null);
+          return;
+        }
+        const nids = Object.values(v).map(node => id.getNID(node));
+        
+        // Run the hashing algorithm on the KID and the NIDs
+        const nodeID = context.hash(kid, nids);
+        const nodeToStoreOn = Object.values(v).find(node => id.getNID(node) === nodeID);
+
+        // Call local.comm.send to invoke mem append on that node
+        const remote = {node: nodeToStoreOn, service: 'mem', method: 'append'};
+        global.distribution.local.comm.send([state, configuration], remote, (e, v) => {
+          if (e) {
+            callback(new Error("Could not put object on node"), null);
+            return;
+          }
+          callback(null, v);
+        });
+      });
+    },
+
 
     del: (configuration, callback) => {
       // Convert primary key to key identifier (KID) by applying SHA256 on the primary key

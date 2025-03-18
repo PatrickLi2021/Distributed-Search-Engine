@@ -119,7 +119,7 @@ function get(configuration, callback) {
 
 /*
 * Parameters:
-* - state: The JS object that we want to put inside our store
+* - state: The JS object that we want to append inside our store
 * - configuration: The string key that we want to get
 * - callback: callback function, provide target object as a value to the corresponding continuation
 */
