@@ -24,80 +24,130 @@ Since the compaction stage is an intermediate stage, I just tested to make sure 
 and printed out the intermediate result to verify that it the output of each map execution was later being 
 compacted
 */
-test.only('(15 pts) implement compaction', (done) => {
-        const mapper = (key, value) => {
-          const parts = value.split(',');
-          const storeID = parts[0];
-          const saleAmount = parseFloat(parts[1]); 
-          
-          return [{ [storeID]: saleAmount }];
-        };
-      
-        const reducer = (key, values) => {
-          const out = {};
-          out[key] = values.reduce((sum, val) => sum + val, 0);
-          return out;
-        };
-      
-        // Compact Function
-        const compact = (mapOutput) => {
-          const combined = {};
-          mapOutput.forEach(item => {
-            const key = Object.keys(item)[0];
-            const value = Object.values(item)[0];
-      
-            if (combined[key]) {
-              combined[key] += value;
-            } else {
-              combined[key] = value;
-            }
-          });
-          return Object.entries(combined).map(([key, value]) => ({ [key]: value }));
-        };
-      
-        const dataset = [
-          {'1': 'Walmart,100'}, {'2': 'CVS,200'}, {'3': 'Giant,150'},
-          {'4': 'Walmart,50'},  {'5': 'CVS,300'}, {'6': 'Giant,200'},
-          {'7': 'Walmart,75'},  {'8': 'CVS,50'},  {'9': 'Giant,300'},
-          {'10': 'Walmart,125'}, {'11': 'CVS,500'}, {'12': 'Giant,250'},
-          {'13': 'Walmart,80'},  {'14': 'CVS,140'}, {'15': 'Giant,180'},
-          {'16': 'Walmart,95'},  {'17': 'CVS,210'}, {'18': 'Giant,200'},
-          {'19': 'Walmart,60'},  {'20': 'CVS,350'}, {'21': 'Giant,300'}
-        ];
-      
-        const expected = [{"Giant": 1580}, {"Walmart": 585}, {"CVS": 1750}];
-      
-        const doMapReduce = (cb) => {
-          distribution.compactGroup.mr.exec({
-            keys: getDatasetKeys(dataset),
-            map: mapper,
-            reduce: reducer,
-            compact: compact
-          }, (e, v) => {
-            try {
-              expect(v).toEqual(expect.arrayContaining(expected));
-              done();
-            } catch (e) {
-              done(e);
-            }
-          });
-        };
-      
-        let cntr = 0;
-        dataset.forEach((o) => {
-          const key = Object.keys(o)[0];
-          const value = o[key];
-          distribution.compactGroup.store.put(value, key, (e, v) => {
-            cntr++;
-            if (cntr === dataset.length) {
-              doMapReduce();
-            }
-          });
+test('(15 pts) implement compaction', (done) => {
+    const mapper = (key, value) => {
+        const parts = value.split(',');
+        const storeID = parts[0];
+        const saleAmount = parseFloat(parts[1]); 
+        
+        return [{ [storeID]: saleAmount }];
+    };
+
+    const reducer = (key, values) => {
+        const out = {};
+        out[key] = values.reduce((sum, val) => sum + val, 0);
+        return out;
+    };
+
+    // Compact Function
+    const compact = (mapOutput) => {
+        const combined = {};
+        mapOutput.forEach(item => {
+        const key = Object.keys(item)[0];
+        const value = Object.values(item)[0];
+
+        if (combined[key]) {
+            combined[key] += value;
+        } else {
+            combined[key] = value;
+        }
         });
+        return Object.entries(combined).map(([key, value]) => ({ [key]: value }));
+    };
+
+    const dataset = [
+        {'1': 'Walmart,100'}, {'2': 'CVS,200'}, {'3': 'Giant,150'},
+        {'4': 'Walmart,50'},  {'5': 'CVS,300'}, {'6': 'Giant,200'},
+        {'7': 'Walmart,75'},  {'8': 'CVS,50'},  {'9': 'Giant,300'},
+        {'10': 'Walmart,125'}, {'11': 'CVS,500'}, {'12': 'Giant,250'},
+        {'13': 'Walmart,80'},  {'14': 'CVS,140'}, {'15': 'Giant,180'},
+        {'16': 'Walmart,95'},  {'17': 'CVS,210'}, {'18': 'Giant,200'},
+        {'19': 'Walmart,60'},  {'20': 'CVS,350'}, {'21': 'Giant,300'}
+    ];
+
+    const expected = [{"Giant": 1580}, {"Walmart": 585}, {"CVS": 1750}];
+
+    const doMapReduce = (cb) => {
+        distribution.compactGroup.mr.exec({
+        keys: getDatasetKeys(dataset),
+        map: mapper,
+        reduce: reducer,
+        compact: compact
+        }, (e, v) => {
+        try {
+            expect(v).toEqual(expect.arrayContaining(expected));
+            done();
+        } catch (e) {
+            done(e);
+        }
+        });
+    };
+
+    let cntr = 0;
+    dataset.forEach((o) => {
+        const key = Object.keys(o)[0];
+        const value = o[key];
+        distribution.compactGroup.store.put(value, key, (e, v) => {
+        cntr++;
+        if (cntr === dataset.length) {
+            doMapReduce();
+        }
+        });
+    });
 });
 
+/* 
+    In order to test distributed persistence, I ran a regular MapReduce workflow but in the exec 
+    configuration, I specified an out group in the distributed storage that each reducer node writes
+    its intermediate output to.
+*/
 test('(15 pts) add support for distributed persistence', (done) => {
-    done(new Error('Not implemented'));
+    const mapper = (key, value) => {
+        const words = value.split(/(\s+)/).filter((e) => e !== ' ');
+        const out = {};
+        out[words[1]] = parseInt(words[3]);
+        
+        return [out];
+      };
+    
+      const reducer = (key, values) => {
+        const out = {};
+        out[key] = values.reduce((a, b) => Math.max(a, b), -Infinity);
+        return out;
+      };
+    
+      const dataset = [
+        {'000': '006701199099999 1950 0515070049999999N9 +0000 1+9999'},
+        {'106': '004301199099999 1950 0515120049999999N9 +0022 1+9999'},
+        {'212': '004301199099999 1950 0515180049999999N9 -0011 1+9999'},
+        {'318': '004301265099999 1949 0324120040500001N9 +0111 1+9999'},
+        {'424': '004301265099999 1949 0324180040500001N9 +0078 1+9999'},
+      ];
+    
+      const expected = [{'1950': 22}, {'1949': 111}];
+    
+        const doMapReduce = (cb) => {
+        distribution.distributedPersistenceGroup.mr.exec({keys: getDatasetKeys(dataset), map: mapper, reduce: reducer, out: 'out'}, (e, v) => {
+            try {
+            expect(v).toEqual(expect.arrayContaining(expected));
+            done();
+            } catch (e) {
+            done(e);
+            }
+        });
+        };
+
+        let cntr = 0;
+        dataset.forEach((o) => {
+        const key = Object.keys(o)[0];
+        const value = o[key];
+        distribution.distributedPersistenceGroup.store.put(value, key, (e, v) => {
+            cntr++;
+            if (cntr === dataset.length) {
+            doMapReduce();
+            }
+        });
+    });
 });
 
 test('(5 pts) add support for optional in-memory operation', (done) => {

@@ -137,7 +137,16 @@ function mr(config) {
             }
             reduceRes.push(originalReduceFunc(key, valueArr));
             if (numKeys === keysToReduce) {
-              reduceCallback(null, reduceRes);
+              // reduceCallback(null, reduceRes);
+
+              // Once this worker node has its reduce result, we want to write it to the out group
+              global.distribution[configuration['out']].store.put(reduceRes, key, (e, v) => {
+                if (e) {
+                  reduceCallback(new Error("Error putting reduce result in out group"), null);
+                  return;
+                }
+                reduceCallback(null, v);
+              });
             }
           });
         });
@@ -176,7 +185,22 @@ function mr(config) {
                 reducersDone++;
                 reduceResults.push(partialReduceVal);
                 if (reducersDone === Object.keys(reduceGroupNodes).length) {
-                  notifyCallback(null, reduceResults);
+                  // notifyCallback(null, reduceResults);
+                  // For distributed persistence, once all the reducer nodes are done writing their reduce results
+                  // to the distributed storage, we collect them here
+                  global.distribution[configuration['out']].store.get(null, (e, reduceResults) => {
+                    // Iterate over all the keys fetched from the out group and get their values
+                    let finalOutput = [];
+                    const numKeys = reduceResults.length;
+                    reduceResults.forEach(key => {
+                      global.distribution[configuration['out']].store.get(key, (e, val) => {
+                        finalOutput.push(val);
+                        if (finalOutput.length === numKeys) {
+                          notifyCallback(null, finalOutput);
+                        }
+                      });
+                    });
+                  });
                 }
               });
             }
@@ -200,29 +224,35 @@ function mr(config) {
             // Once we have all the nodes in the group, register the reduceGroup on this node, to be used in the 
             // shuffle and reduce phases later
             global.distribution.local.groups.put('reduceGroup', groupNodes, (e, v) => {
-              // Register reduceGroup on all nodes in this group
-              global.distribution.reduceGroup.groups.put('reduceGroup', groupNodes, (e, v) => {
-                for (const [_, node] of Object.entries(groupNodes)) {
-                  // Have each worker node start executing map
-                  const remote = {node: node, service: jobID, method: 'mapWrapper'};
-                  global.distribution.local.comm.send([configuration, jobID], remote, (e, v) => {
-                    if (totalDone == 0) { // this ensures that we only execute the execCallback once
-                      totalDone++;
-                      if (e) {
-                        execCallback(new Error("Error with worker node executing map"), null);
-                        return;
-                      }
-                      v = v.flat().filter(item => Object.keys(item).length > 0);
-                      execCallback(null, v);
-                  }
-                });
-              } 
+              // Register the out group (for distributed persistence) from the configuration 
+              // on this node and all nodes in the group
+              global.distribution.local.groups.put(configuration['out'], groupNodes, (e, v) => {
+                global.distribution[configuration['out']].groups.put(configuration['out'], groupNodes, (e, v) => {
+                // Register reduceGroup on all nodes in this group
+                global.distribution.reduceGroup.groups.put('reduceGroup', groupNodes, (e, v) => {
+                  for (const [_, node] of Object.entries(groupNodes)) {
+                    // Have each worker node start executing map
+                    const remote = {node: node, service: jobID, method: 'mapWrapper'};
+                    global.distribution.local.comm.send([configuration, jobID], remote, (e, v) => {
+                      if (totalDone == 0) { // this ensures that we only execute the execCallback once
+                        totalDone++;
+                        if (e) {
+                          execCallback(new Error("Error with worker node executing map"), null);
+                          return;
+                        }
+                        v = v.flat().filter(item => Object.keys(item).length > 0);
+                        execCallback(null, v);
+                    }
+                  });
+                } 
+              });
             });
           });
         });
-      })
-    });
-  }
+      });
+    })
+  });
+}
   return {exec};
 };
 
