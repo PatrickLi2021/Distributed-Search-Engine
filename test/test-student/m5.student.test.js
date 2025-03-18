@@ -25,7 +25,7 @@ const n2 = {ip: '127.0.0.1', port: 7111};
 const n3 = {ip: '127.0.0.1', port: 7112};
 const n4 = {ip: '127.0.0.1', port: 7113};
 
-test('(1 pts) Test 1', (done) => {
+test('(1 pts) Student Test 1', (done) => {
   const mapper = (key, value) => {
     const words = value.split(/(\s+)/).filter((e) => e !== ' ');
     const out = {};
@@ -71,7 +71,7 @@ test('(1 pts) Test 1', (done) => {
 });
 
 
-test('(1 pts) Test 2', (done) => {
+test('(1 pts) Student Test 2', (done) => {
   const mapper = (key, value) => {
     const parts = value.split(',');
     const category = parts[1];  
@@ -123,7 +123,7 @@ test('(1 pts) Test 2', (done) => {
 });
 
 
-test('(1 pts) Test 3', (done) => {
+test('(1 pts) Student Test 3', (done) => {
   const mapper = (key, value) => {
     const parts = value.split(',');
     const category = parts[0];
@@ -175,7 +175,7 @@ test('(1 pts) Test 3', (done) => {
   
 });
 
-test('(1 pts) Test 4', (done) => {
+test('(1 pts) Student Test 4', (done) => {
   const mapper = (key, value) => {
     const parts = value.split(',');
     const storeID = parts[0];
@@ -227,7 +227,7 @@ test('(1 pts) Test 4', (done) => {
   
 });
 
-test('(1 pts) Test 5', (done) => {
+test('(1 pts) Student Test 5', (done) => {
   const mapper = (key, value) => {
     const words = value.split(/(\s+)/).filter((e) => e !== ' ');
     const out = {};

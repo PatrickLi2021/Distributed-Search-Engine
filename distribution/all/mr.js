@@ -40,12 +40,11 @@ function mr(config) {
    * @param {MRConfig} configuration
    * @param {Callback} cb
    * @return {void}
-   * 
+   * @property {Function} [compact] // Optional
    */
   function exec(configuration, execCallback) {
     // Initialize counter and aggregate variables to be used in the various phases
     let mappersDone = 0;
-    let shufflersDone = 0;
     let totalDone = 0;
     let reducersDone = 0;
     let mapResults = [];
@@ -57,23 +56,25 @@ function mr(config) {
     // Initialize map() wrapper in configuration
     configuration['mapWrapper'] = (configuration, jobID, mapCallback) => {
       const originalMapFunc = configuration['map'];
+      const compactFunc = configuration['compact'];
       // Count how many keys exist on this worker node that are in the current MR workflow
       const getConfig = {key: null, gid: configuration['gid']};
-      const mapRes = [];
+      let mapRes = [];
       global.distribution.local.store.get(getConfig, (e, v) => {
         const numKeys = v.length;
         // Iterate over each key in this MR workflow
         let completedKeys = 0;  // Track number of keys fully processed
-
         v.forEach(key => {
           const getConfig = { key: key, gid: configuration['gid'] };
-          
           global.distribution.local.store.get(getConfig, (e, v) => {
             if (v) {
-              const mapOutput = originalMapFunc(key, v);
+              let mapOutput = originalMapFunc(key, v);
               mapRes.push(mapOutput);
+              if (compactFunc) {
+                mapRes = compactFunc(mapRes);
+              }
               let mapOutputKeys = 0;
-        
+              // Apply compaction function if provided
               mapOutput.forEach((item) => {
                 const key = Object.keys(item)[0];
                 const value = Object.values(item)[0];
