@@ -61,13 +61,13 @@ function mr(config) {
       // Count how many keys exist on this worker node that are in the current MR workflow
       const getConfig = {key: null, gid: configuration['gid']};
       let mapRes = [];
-      global.distribution.local.store.get(getConfig, (e, v) => {
+      global.distribution.local[inMem].get(getConfig, (e, v) => {
         const numKeys = v.length;
         // Iterate over each key in this MR workflow
         let completedKeys = 0;  // Track number of keys fully processed
         v.forEach(key => {
           const getConfig = { key: key, gid: configuration['gid'] };
-          global.distribution.local.store.get(getConfig, (e, v) => {
+          global.distribution.local[inMem].get(getConfig, (e, v) => {
             if (v) {
               let mapOutput = originalMapFunc(key, v);
               mapRes.push(mapOutput);
@@ -79,13 +79,15 @@ function mr(config) {
               mapOutput.forEach((item) => {
                 const key = Object.keys(item)[0];
                 const value = Object.values(item)[0];
-                global.distribution['reduceGroup'].store.append(value, key, (e, v) => {
+        
+                global.distribution['reduceGroup'][inMem].append(value, key, (e, v) => {
                   mapOutputKeys++;
                   if (e) {
                     mapCallback(new Error("Issue appending key to new node"), null);
                     return;
                   }
-                  if (mapOutputKeys === mapOutput.length) { 
+                  
+                  if (mapOutputKeys === mapOutput.length) {
                     completedKeys++;
                     if (completedKeys === numKeys) { 
                       const remote = { node: configuration['execNode'], service: jobID, method: 'notify' };
@@ -122,14 +124,14 @@ function mr(config) {
       const originalReduceFunc = configuration['reduce']; // Store the original, pure reduce function
       // Retrieve all the keys SOLELY USED FOR REDUCE on this node (from the reduceGroup)
       const getConfig = {key: null, gid: 'reduceGroup'};
-      global.distribution.local.store.get(getConfig, (e, keys) => {
+      global.distribution.local[inMem].get(getConfig, (e, keys) => {
         // Iterate over each key and retrieve the list of value(s)
         const numKeys = keys.length;
         let keysToReduce = 0;
         let reduceRes = [];
         keys.forEach(key => {
           const getConfig = {key: key, gid: 'reduceGroup'};
-          global.distribution.local.store.get(getConfig, (e, valueArr) => {
+          global.distribution.local[inMem].get(getConfig, (e, valueArr) => {
             keysToReduce++;
             if (e) {
               reduceCallback(new Error("Error retrieving values associated with key"), null);
@@ -137,14 +139,17 @@ function mr(config) {
             }
             reduceRes.push(originalReduceFunc(key, valueArr));
             if (numKeys === keysToReduce) {
-              // Once this worker node has its reduce result, we want to write it to the out group
-              global.distribution[configuration['out']].store.put(reduceRes, key, (e, v) => {
-                if (e) {
-                  reduceCallback(new Error("Error putting reduce result in out group"), null);
-                  return;
-                }
-                reduceCallback(null, v);
-              });
+              if (!configuration['out']) {
+                reduceCallback(null, reduceRes);
+              } else {
+                global.distribution[configuration['out']][inMem].put(reduceRes, key, (e, v) => {
+                  if (e) {
+                    reduceCallback(new Error("Error putting reduce result in out group"), null);
+                    return;
+                  }
+                  reduceCallback(null, v);
+                });
+              }
             }
           });
         });
@@ -184,22 +189,23 @@ function mr(config) {
                 reducersDone++;
                 reduceResults.push(partialReduceVal);
                 if (reducersDone === Object.keys(reduceGroupNodes).length) {
-                  // notifyCallback(null, reduceResults);
-                  // For distributed persistence, once all the reducer nodes are done writing their reduce results
-                  // to the distributed storage, we collect them here
-                  global.distribution[configuration['out']].store.get(null, (e, reduceResults) => {
-                    // Iterate over all the keys fetched from the out group and get their values
-                    let finalOutput = [];
-                    const numKeys = reduceResults.length;
-                    reduceResults.forEach(key => {
-                      global.distribution[configuration['out']].store.get(key, (e, val) => {
-                        finalOutput.push(val);
-                        if (finalOutput.length === numKeys) { 
-                          notifyCallback(null, finalOutput);
-                        }
+                  if (!configuration['out']) {
+                    notifyCallback(null, reduceResults);
+                  } else {
+                    global.distribution[configuration['out']][inMem].get(null, (e, reduceResults) => {
+                      // Iterate over all the keys fetched from the out group and get their values
+                      let finalOutput = [];
+                      const numKeys = reduceResults.length;
+                      reduceResults.forEach(key => {
+                        global.distribution[configuration['out']][inMem].get(key, (e, val) => {
+                          finalOutput.push(val);
+                          if (finalOutput.length === numKeys) {
+                            notifyCallback(null, finalOutput);
+                          }
+                        });
                       });
                     });
-                  });
+                  }
                 }
               });
             }
@@ -220,38 +226,38 @@ function mr(config) {
         global.distribution[configuration['gid']].routes.put(configuration, jobID, (e, v) => {
           // Get all the nodes in the group
           global.distribution.local.groups.get(configuration['gid'], (e, groupNodes) => {
-            // Once we have all the nodes in the group, register the reduceGroup on this node, to be used in the 
-            // shuffle and reduce phases later
-            global.distribution.local.groups.put('reduceGroup', groupNodes, (e, v) => {
-              // Register the out group (for distributed persistence) from the configuration 
-              // on this node and all nodes in the group
-              global.distribution.local.groups.put(configuration['out'], groupNodes, (e, v) => {
-                global.distribution[configuration['out']].groups.put(configuration['out'], groupNodes, (e, v) => {
-                // Register reduceGroup on all nodes in this group
-                global.distribution.reduceGroup.groups.put('reduceGroup', groupNodes, (e, v) => {
-                  for (const [_, node] of Object.entries(groupNodes)) {
-                    // Have each worker node start executing map
-                    const remote = {node: node, service: jobID, method: 'mapWrapper'};
-                    global.distribution.local.comm.send([configuration, jobID], remote, (e, v) => {
-                      if (totalDone == 0) { // this ensures that we only execute the execCallback once
-                        totalDone++;
-                        if (e) {
-                          execCallback(new Error("Error with worker node executing map"), null);
-                          return;
-                        }
-                        v = v.flat().filter(item => Object.keys(item).length > 0);
-                        execCallback(null, v);
-                    }
-                  });
-                } 
+            // Put out group locally on orchestrator node
+            global.distribution.local.groups.put(configuration['out'], groupNodes, (e, v) => {
+              // Put out group on every node in our group
+              global.distribution[configuration['out']].groups.put(configuration['out'], groupNodes, (e, v) => {
+                // Once we have all the nodes in the group, register the reduceGroup on this node, to be used in the 
+                // shuffle and reduce phases later
+                global.distribution.local.groups.put('reduceGroup', groupNodes, (e, v) => {
+                  // Register reduceGroup on all nodes in this group
+                  global.distribution.reduceGroup.groups.put('reduceGroup', groupNodes, (e, v) => {
+                    for (const [_, node] of Object.entries(groupNodes)) {
+                      // Have each worker node start executing map
+                      const remote = {node: node, service: jobID, method: 'mapWrapper'};
+                      global.distribution.local.comm.send([configuration, jobID], remote, (e, v) => {
+                        if (totalDone == 0) { // this ensures that we only execute the execCallback once
+                          totalDone++;
+                          if (e) {
+                            execCallback(new Error("Error with worker node executing map"), null);
+                            return;
+                          }
+                          v = v.flat().filter(item => Object.keys(item).length > 0);
+                          execCallback(null, v);
+                      }
+                    });
+                  } 
+                });
               });
             });
           });
         });
-      });
-    })
-  });
-}
+      })
+    });
+  }
   return {exec};
 };
 

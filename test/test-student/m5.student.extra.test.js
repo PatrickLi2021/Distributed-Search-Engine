@@ -150,7 +150,7 @@ test('(15 pts) add support for distributed persistence', (done) => {
     });
 });
 
-test.only('(5 pts) add support for optional in-memory operation', (done) => {
+test('(5 pts) add support for optional in-memory operation', (done) => {
     const mapper = (key, value) => {
         const words = value.split(/(\s+)/).filter((e) => e !== ' ');
         const out = {};
@@ -190,7 +190,7 @@ test.only('(5 pts) add support for optional in-memory operation', (done) => {
         dataset.forEach((o) => {
         const key = Object.keys(o)[0];
         const value = o[key];
-        distribution.inMemGroup.store.put(value, key, (e, v) => {
+        distribution.inMemGroup.mem.put(value, key, (e, v) => {
             cntr++;
             if (cntr === dataset.length) {
                 doMapReduce();

@@ -111,8 +111,10 @@ function get(configuration, callback) {
   } catch (err) {
     if (err.code === 'ENOENT') {
       callback(new Error(`No data found for key: ${configuration}`), null);
+      return;
     } else {
       callback(new Error("Error reading the file"), null);
+      return;
     }
   }
 }
