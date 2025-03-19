@@ -5,6 +5,7 @@ function store(config) {
   context.gid = config.gid || 'all';
   context.hash = config.hash || global.distribution.util.id.naiveHash;
 
+
   /* For the distributed store service, the configuration will always be a string */
 
   return {

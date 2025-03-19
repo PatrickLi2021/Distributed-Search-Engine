@@ -34,6 +34,8 @@ function mr(config) {
   const context = {
     gid: config.gid || 'all',
     hash: config.hash || global.distribution.util.id.naiveHash,
+    workflows: new Set(), /* used in iterative MapReduce to determine whether or not a particular
+                          workflow (i.e. a set of inputs has been seen before) */
   };
 
   /**
@@ -41,6 +43,10 @@ function mr(config) {
    * @param {Callback} cb
    * @return {void}
    * @property {Function} [compact] // Optional
+   * @property {String} [out] // Optional
+   * @property {Boolean} [memory] // Optional
+   * @property {Number} [maxIter] // Optional
+   * @property {Number} [curIter] // Optional
    */
   function exec(configuration, execCallback) {
     // Initialize counter and aggregate variables to be used in the various phases
@@ -69,13 +75,18 @@ function mr(config) {
           const getConfig = { key: key, gid: configuration['gid'] };
           global.distribution.local[inMem].get(getConfig, (e, v) => {
             if (v) {
-              let mapOutput = originalMapFunc(key, v);
+              let mapOutput;
+              if (configuration['curIter'] && configuration['curIter'] == 2) {
+                mapOutput = configuration['map2'](key, v);
+              } else {
+                mapOutput = originalMapFunc(key, v);
+              }
               mapRes.push(mapOutput);
+              // Apply compaction function if needed
               if (compactFunc) {
                 mapRes = compactFunc(mapRes);
               }
               let mapOutputKeys = 0;
-              // Apply compaction function if provided
               mapOutput.forEach((item) => {
                 const key = Object.keys(item)[0];
                 const value = Object.values(item)[0];
@@ -86,7 +97,6 @@ function mr(config) {
                     mapCallback(new Error("Issue appending key to new node"), null);
                     return;
                   }
-                  
                   if (mapOutputKeys === mapOutput.length) {
                     completedKeys++;
                     if (completedKeys === numKeys) { 
@@ -137,7 +147,11 @@ function mr(config) {
               reduceCallback(new Error("Error retrieving values associated with key"), null);
               return;
             }
-            reduceRes.push(originalReduceFunc(key, valueArr));
+            if (configuration['curIter'] && configuration['curIter'] === 2 ) {
+              reduceRes.push(configuration['reduce2'](key, valueArr));
+            } else {
+              reduceRes.push(originalReduceFunc(key, valueArr));
+            }
             if (numKeys === keysToReduce) {
               if (!configuration['out']) {
                 reduceCallback(null, reduceRes);
@@ -192,21 +206,21 @@ function mr(config) {
                   if (!configuration['out']) {
                     notifyCallback(null, reduceResults);
                   } else {
-                    global.distribution[configuration['out']][inMem].get(null, (e, reduceResults) => {
-                      // Iterate over all the keys fetched from the out group and get their values
-                      let finalOutput = [];
-                      const numKeys = reduceResults.length;
-                      reduceResults.forEach(key => {
-                        global.distribution[configuration['out']][inMem].get(key, (e, val) => {
-                          finalOutput.push(val);
-                          if (finalOutput.length === numKeys) {
-                            notifyCallback(null, finalOutput);
-                          }
+                      global.distribution[configuration['out']][inMem].get(null, (e, reduceResults) => {
+                        // Iterate over all the keys fetched from the out group and get their values
+                        let finalOutput = [];
+                        const numKeys = reduceResults.length;
+                        reduceResults.forEach(key => {
+                          global.distribution[configuration['out']][inMem].get(key, (e, val) => {
+                            finalOutput.push(val);
+                            if (finalOutput.length === numKeys) {
+                              notifyCallback(null, finalOutput);
+                            }
+                          });
                         });
                       });
-                    });
+                   }
                   }
-                }
               });
             }
           });
@@ -239,14 +253,53 @@ function mr(config) {
                       // Have each worker node start executing map
                       const remote = {node: node, service: jobID, method: 'mapWrapper'};
                       global.distribution.local.comm.send([configuration, jobID], remote, (e, v) => {
-                        if (totalDone == 0) { // this ensures that we only execute the execCallback once
+                        if (totalDone === 0) { // this ensures that we only execute the execCallback once
                           totalDone++;
                           if (e) {
                             execCallback(new Error("Error with worker node executing map"), null);
                             return;
                           }
-                          v = v.flat().filter(item => Object.keys(item).length > 0);
-                          execCallback(null, v);
+                        const finalMROutput = v.flat().filter(item => Object.keys(item).length > 0);
+                        // If we've reached the desired number of iterations, we can call the callback
+                        // with our final result
+                        if (configuration['maxIter'] === configuration['curIter']) {
+                          execCallback(null, finalMROutput);
+                          return;
+                        }
+                        // Recursively call exec for another iteration
+                        else {
+                          configuration['curIter'] += 1;
+                          // Delete all groups from previous iterations
+                          global.distribution[configuration['gid']].groups.del(configuration['out'], (e, v) => {
+                            global.distribution[configuration['gid']].groups.del('reduceGroup', (e, v) => {
+                              // Delete all the keys that were on the previous group
+                              global.distribution[configuration['gid']].store.get(null, (e, groupKeys) => {
+                                let keysDeleted = 0;
+                                groupKeys.forEach(keyToDelete => {
+                                  global.distribution[configuration['gid']].store.del(keyToDelete, (e, v) => {
+                                    keysDeleted++;
+                                    if (keysDeleted === groupKeys.length) {
+                                      // Redistribute intermediate results to a new instance of the group
+                                      const newKeys = finalMROutput.map(obj => Object.keys(obj)[0]);
+                                      let cntr = 0;
+                                      finalMROutput.forEach((o) => {
+                                        const key = Object.keys(o)[0];
+                                        const value = o[key];
+                                        distribution[configuration['gid']].store.put(value, key, (e, v) => {
+                                          cntr++;
+                                          if (cntr === finalMROutput.length) {
+                                            configuration['keys'] = newKeys;
+                                            exec(configuration, execCallback);
+                                          }
+                                        });
+                                      });
+                                    }
+                                  });
+                                });
+                              });
+                            });
+                          });
+                        }
                       }
                     });
                   } 

@@ -138,8 +138,8 @@
         }
     },
     "reportM5": {
-        "hours": 15,
-        "loc": 332,
+        "hours": 16,
+        "loc": 264,
         "dev": {
             "cpu-no": 10,
             "mem-gb": 8.02,

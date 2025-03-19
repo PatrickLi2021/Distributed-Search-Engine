@@ -200,7 +200,127 @@ test('(5 pts) add support for optional in-memory operation', (done) => {
 });
 
 test('(15 pts) add support for iterative map-reduce', (done) => {
-    done(new Error('Not implemented'));
+  const mapper = (key, value) => {
+    const words = value.split(/(\s+)/).filter((e) => e !== ' ');
+    const out = {};
+    out[words[1]] = parseInt(words[3]);
+    
+    return [out];
+  };
+
+  const mapper2 = (key, value) => {
+    const out = {};
+    out[key] = parseInt(value) + 50;
+    return [out];
+  };
+
+  const reducer = (key, values) => {
+    const out = {};
+    out[key] = values.reduce((a, b) => Math.max(a, b), -Infinity);
+    return out;
+  };
+
+  const reducer2 = (key, values) => {
+    const out = {};
+    out[key] = values.reduce((a, b) => Math.max(a, b), -Infinity);
+    return out;
+  };
+
+  const dataset = [
+    {'000': '006701199099999 1950 0515070049999999N9 +0000 1+9999'},
+    {'106': '004301199099999 1950 0515120049999999N9 +0022 1+9999'},
+    {'212': '004301199099999 1950 0515180049999999N9 -0011 1+9999'},
+    {'318': '004301265099999 1949 0324120040500001N9 +0111 1+9999'},
+    {'424': '004301265099999 1949 0324180040500001N9 +0078 1+9999'},
+  ];
+
+  const expected = [{"1950": 72}, {"1949": 161}];
+
+  const doMapReduce = (cb) => {
+    distribution.iterativeGroup.mr.exec({keys: getDatasetKeys(dataset), map: mapper, reduce: reducer, map2: mapper2, reduce2: reducer2, curIter: 1, maxIter: 2, memory: false, out: 'out'}, (e, v) => {
+      try {
+        expect(v).toEqual(expect.arrayContaining(expected));
+        done();
+      } catch (e) {
+        done(e);
+      }
+    });
+  };
+
+  let cntr = 0;
+  // Send the dataset to the cluster
+  dataset.forEach((o) => {
+    const key = Object.keys(o)[0];
+    const value = o[key];
+    distribution.iterativeGroup.store.put(value, key, (e, v) => {
+      cntr++;
+      // Once the dataset is in place, run the map reduce
+      if (cntr === dataset.length) {
+        doMapReduce();
+      }
+    });
+  });
+  // const mapper = (key, value) => {
+  //   const words = value.split(/(\s+)/).filter((e) => e !== ' ');
+  //   const out = {};
+  //   out[words[1]] = parseInt(words[3]); 
+  //   return [out];
+  // };
+
+  // const reducer = (key, values) => {
+  //   const out = {};
+  //   out[key] = values.reduce((a, b) => Math.max(a, b), -Infinity);
+  //   return out;
+  // };
+
+  // const secondMapper = (key, value) => {
+  //   const out = {};
+  //   out[key] = value * 2;
+  //   return [out];
+  // };
+
+  // const secondReducer = (key, values) => {
+  //   const out = {};
+  //   out[key] = values.reduce((a, b) => a + b, 0); 
+  //   return out;
+  // };
+
+  // const dataset = [
+  //   {'000': '006701199099999 1950 0515070049999999N9 +0000 1+9999'},
+  //   {'106': '004301199099999 1950 0515120049999999N9 +0022 1+9999'},
+  // ];
+
+  // const expected = [{'1950': 44}];
+
+  // const config = {
+  //   keys: getDatasetKeys(dataset),
+  //   map: (key, value) => (config.curIter === 1 ? mapper(key, value) : secondMapper(key, value)),
+  //   reduce: (key, values) => (config.curIter === 1 ? reducer(key, values) : secondReducer(key, values)),
+  //   curIter: 1,
+  //   maxIter: 1,
+  // };
+
+  // distribution.iterativeGroup.mr.exec(config, (e, v) => {
+  //   try {
+  //     if (e) return done(e);
+  //     expect(v).toEqual(expected);
+  //     done();
+  //   } catch (err) {
+  //     done(err);
+  //   }
+  // });
+
+  // let cntr = 0;
+  // dataset.forEach((o) => {
+  //   const key = Object.keys(o)[0];
+  //   const value = o[key];
+  //   distribution.iterativeGroup.store.put(value, key, (e, v) => {
+  //     cntr++;
+  //     if (cntr === dataset.length) {
+  //       distribution.iterativeGroup.mr.exec(config, done);
+  //     }
+  //   });
+  // });
 });
 
 /*
